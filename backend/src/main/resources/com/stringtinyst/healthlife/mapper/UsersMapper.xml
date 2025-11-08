@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stringtinyst.healthlife.mapper.UsersMapper">
+    
+    <update id="updateUser" parameterType="com.stringtinyst.healthlife.pojo.User">
+        UPDATE users
+        <set>
+            <if test="email != null">
+                Email = #{email},
+            </if>
+            <if test="passwordHash != null">
+                PasswordHash = #{passwordHash},
+            </if>
+            <if test="nickname != null">
+                Nickname = #{nickname},
+            </if>
+            <if test="gender != null">
+                Gender = #{gender},
+            </if>
+            <if test="dateOfBirth != null">
+                DateOfBirth = #{dateOfBirth},
+            </if>
+        </set>
+        WHERE UserID = #{userID}
+    </update>
+    
+</mapper>

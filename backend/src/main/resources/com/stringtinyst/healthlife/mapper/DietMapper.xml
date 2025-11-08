@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stringtinyst.healthlife.mapper.DietMapper">
+    
+    <select id="list" resultType="com.stringtinyst.healthlife.pojo.Diet">
+        SELECT *
+        FROM dietitem
+        <where>
+            UserID = #{userID}
+            <if test="startDate != null and endDate != null">
+                AND RecordDate BETWEEN #{startDate} AND #{endDate}
+            </if>
+            <if test="mealType != null">
+                AND MealType = #{mealType}
+            </if>
+        </where>
+        ORDER BY RecordDate DESC
+    </select>
+    
+</mapper>

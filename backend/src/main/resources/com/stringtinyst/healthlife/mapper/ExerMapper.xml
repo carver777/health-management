@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.stringtinyst.healthlife.mapper.ExerMapper">
+    
+    <select id="list" resultType="com.stringtinyst.healthlife.pojo.Exer">
+        SELECT *
+        FROM exerciseitem
+        <where>
+            UserID = #{userID}
+            <if test="startDate != null and endDate != null">
+                AND RecordDate BETWEEN #{startDate} AND #{endDate}
+            </if>
+            <if test="exerciseType != null">
+                AND ExerciseType = #{exerciseType}
+            </if>
+        </where>
+        ORDER BY RecordDate DESC
+    </select>
+    
+</mapper>
