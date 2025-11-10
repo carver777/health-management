@@ -7,9 +7,9 @@
 在开始贡献之前，请：
 
 1. 阅读 [README](./README.md) 了解项目概况
-2. 查看 [项目路线图](./docs/roadmap.md) 了解开发计划
-3. 浏览 [API 文档预览](./docs/api/overview.md) 了解项目接口文档
-4. 熟悉项目使用的技术栈
+2. 查看 [系统架构蓝图](./docs/architecture.md) 掌握整体设计以及项目所用技术栈
+3. 查看 [项目路线图](./docs/roadmap.md) 了解开发计划
+4. 浏览 [API 文档预览](./docs/api/overview.md) 熟悉项目接口文档
 
 ## 开发环境
 

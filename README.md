@@ -50,12 +50,16 @@
 ## 技术栈
 
 **前端** Vue 3 + Nuxt 4 + TypeScript + NuxtUI
-**后端** Java 17 + Spring Boot 3.4 + MySQL + Redis
+**后端** Java 17 + Spring Boot 3.4 + MySQL
 
 详细技术栈与开发指南请查看：
 
 - [前端项目](./frontend/README.md)
 - [后端项目](./backend/README.md)
+
+## 系统架构
+
+系统采用前后端分离的微服务架构，使用 REST 与 SSE 通道交互，MySQL 提供数据存储，通过 Spring AI 对接通义千问，具体可参考 [系统架构蓝图](./docs/architecture.md)
 
 ## 项目结构
 
@@ -69,6 +73,7 @@ health-management/
 ## 文档
 
 - [贡献指南](./CONTRIBUTING.md) - 参与开发的说明
+- [系统架构蓝图](./docs/architecture.md) - 宏观架构设计与流程
 - [API 文档预览](./docs/api/overview.md) - 接口文档预览
 - [项目路线图](./docs/roadmap.md) - 开发计划与进度
 - [提交规范](./docs/git-commit-guide.md) - Git 提交格式
