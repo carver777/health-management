@@ -1,6 +1,6 @@
 # 健康管理系统
 
-一个现代化的健康管理平台，帮助用户追踪身体数据、管理饮食运动，并提供 AI 健康咨询服务。
+一个现代化的健康管理平台，帮助用户追踪身体数据、管理饮食运动，并提供 AI 健康咨询服务
 
 ## 功能特性
 
@@ -49,8 +49,8 @@
 
 ## 技术栈
 
-**前端**: Vue 3 + Nuxt 4 + TypeScript + NuxtUI  
-**后端**: Java 17 + Spring Boot 3.4 + MySQL + Redis
+**前端** Vue 3 + Nuxt 4 + TypeScript + NuxtUI
+**后端** Java 17 + Spring Boot 3.4 + MySQL + Redis
 
 详细技术栈与开发指南请查看：
 
@@ -69,5 +69,6 @@ health-management/
 ## 文档
 
 - [贡献指南](./CONTRIBUTING.md) - 参与开发的说明
+- [API 文档预览](./docs/api/overview.md) - 接口文档预览
 - [项目路线图](./docs/roadmap.md) - 开发计划与进度
 - [提交规范](./docs/git-commit-guide.md) - Git 提交格式
