@@ -26,11 +26,12 @@
 
 ### 开发工具
 
-- **Maven** - 项目构建管理
+- **Gradle 8.12** - 项目构建管理
 - **Lombok** - 简化 Java 代码
 - **PageHelper 1.4.7** - MyBatis 分页插件
 - **Spring Boot DevTools** - 开发热重载
 - **Spring Boot Actuator** - 健康检查端点
+- **Spotless 7.0.3** - 代码格式化工具
 
 ## 项目结构
 
@@ -79,9 +80,11 @@ backend/
 ├── docker-compose.yml                        # Docker Compose 编排
 ├── Dockerfile                                # Docker 镜像构建
 ├── init.sql                                  # 数据库初始化脚本
-├── pom.xml                                   # Maven 依赖配置
-├── mvnw                                      # Maven Wrapper (Unix)
-├── mvnw.cmd                                  # Maven Wrapper (Windows)
+├── build.gradle.kts                          # Gradle 构建配置
+├── settings.gradle.kts                       # Gradle 设置文件
+├── gradle.properties                         # Gradle 属性配置
+├── gradlew                                   # Gradle Wrapper (Unix)
+├── gradlew.bat                               # Gradle Wrapper (Windows)
 └── README.md
 ```
 
@@ -90,32 +93,18 @@ backend/
 ### 环境要求
 
 - Java 17+
-- Maven 3.9+
+- Gradle 8.12+
 - MySQL 8.0+
 
 ### 安装依赖
 
 ```bash
-./mvnw clean install
+./gradlew build -x test
 ```
 
 ### 环境变量配置
 
-参考 `.env.example` 创建环境变量或直接修改 `application.properties`：
-
-```properties
-# 数据库配置
-spring.datasource.url=jdbc:mysql://localhost:3306/health_management_db
-spring.datasource.username=root
-spring.datasource.password=your_password
-
-# AI 配置
-spring.ai.dashscope.api-key=your_dashscope_api_key
-
-# JWT 配置
-jwt.sign-key=your_jwt_secret_key
-jwt.expire-time=43200000
-```
+参照 `.env.example` 配置 `.env` 文件
 
 ### 数据库初始化
 
@@ -123,15 +112,15 @@ jwt.expire-time=43200000
 # 方式 1：手动导入
 mysql -u root -p < init.sql
 
-# 方式 2：使用 Docker Compose（推荐）
+# 方式 2：使用 Docker Compose
 docker-compose up -d mysql
 ```
 
 ### 开发环境启动
 
 ```bash
-# 使用 Maven Wrapper
-./mvnw spring-boot:run
+# 使用 Gradle Wrapper
+./gradlew bootRun
 
 # 或使用 IDE 运行 HealthLifeApplication.java
 # API 运行在 http://localhost:8080
@@ -141,23 +130,33 @@ docker-compose up -d mysql
 
 ```bash
 # 运行所有测试
-./mvnw test
+./gradlew test
 
 # 跳过测试打包
-./mvnw clean package -DskipTests
+./gradlew build -x test
+```
+
+### 代码格式化
+
+```bash
+# 自动修复格式
+./gradlew spotlessApply
+
+# 仅检查格式
+./gradlew spotlessCheck
 ```
 
 ### 构建部署
 
 ```bash
 # 构建 JAR 包
-./mvnw clean package
+./gradlew build
 
 # 运行 JAR
-java -jar target/health-management-backend-0.0.1-SNAPSHOT.jar
+java -jar build/libs/health-management-backend-0.0.1-SNAPSHOT.jar
 
 # 指定环境
-java -jar target/health-management-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
+java -jar build/libs/health-management-backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 ```
 
 ## Docker 部署
@@ -180,18 +179,13 @@ docker run -d \
   health-management-backend:latest
 ```
 
-### 使用 Docker Compose（推荐）
+> 镜像构建阶段会执行 `gradlew spotlessCheck`，若存在未格式化的 Java 文件，构建会直接失败
+
+### 使用 Docker Compose
+
+配置相关环境变量
 
 ```bash
-# 创建 .env 文件配置环境变量
-cat > .env << EOF
-MYSQL_ROOT_PASSWORD=your_mysql_password
-SPRING_PROFILES_ACTIVE=prod
-SPRING_AI_DASHSCOPE_API_KEY=your_dashscope_api_key
-JWT_SIGN_KEY=your_jwt_secret_key
-JWT_EXPIRE_TIME=43200000
-EOF
-
 # 启动所有服务
 docker-compose up -d
 

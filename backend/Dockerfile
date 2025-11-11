@@ -1,24 +1,31 @@
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM eclipse-temurin:17-jdk-jammy AS builder
 
 WORKDIR /app
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+COPY gradle.properties .
 
-RUN mkdir -p /root/.m2 && \
-    echo '<?xml version="1.0" encoding="UTF-8"?>' > /root/.m2/settings.xml && \
-    echo '<settings>' >> /root/.m2/settings.xml && \
-    echo '  <mirrors>' >> /root/.m2/settings.xml && \
-    echo '    <mirror>' >> /root/.m2/settings.xml && \
-    echo '      <id>aliyun</id>' >> /root/.m2/settings.xml && \
-    echo '      <mirrorOf>central</mirrorOf>' >> /root/.m2/settings.xml && \
-    echo '      <name>Aliyun Maven Mirror</name>' >> /root/.m2/settings.xml && \
-    echo '      <url>https://maven.aliyun.com/repository/public</url>' >> /root/.m2/settings.xml && \
-    echo '    </mirror>' >> /root/.m2/settings.xml && \
-    echo '  </mirrors>' >> /root/.m2/settings.xml && \
-    echo '</settings>' >> /root/.m2/settings.xml
+# Configure Aliyun Maven mirror for Gradle
+RUN mkdir -p ~/.gradle && \
+    echo "allprojects {" > ~/.gradle/init.gradle && \
+    echo "    repositories {" >> ~/.gradle/init.gradle && \
+    echo "        maven { url 'https://maven.aliyun.com/repository/public/' }" >> ~/.gradle/init.gradle && \
+    echo "        maven { url 'https://maven.aliyun.com/repository/spring/' }" >> ~/.gradle/init.gradle && \
+    echo "        maven { url 'https://maven.aliyun.com/repository/google/' }" >> ~/.gradle/init.gradle && \
+    echo "        maven { url 'https://maven.aliyun.com/repository/gradle-plugin/' }" >> ~/.gradle/init.gradle && \
+    echo "        mavenLocal()" >> ~/.gradle/init.gradle && \
+    echo "        mavenCentral()" >> ~/.gradle/init.gradle && \
+    echo "    }" >> ~/.gradle/init.gradle && \
+    echo "}" >> ~/.gradle/init.gradle
 
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+RUN ./gradlew dependencies --no-daemon
 COPY src ./src
-RUN mvn clean package -DskipTests -B
+
+# Run spotless check and build
+RUN ./gradlew spotlessCheck --no-daemon
+RUN ./gradlew build -x test --no-daemon
 
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
@@ -29,7 +36,7 @@ RUN apt-get update && \
     groupadd -r spring && \
     useradd -r -g spring spring
 
-COPY --from=builder /app/target/*.jar app.jar
+COPY --from=builder /app/build/libs/*.jar app.jar
 RUN mkdir -p /app/avatars && chown -R spring:spring /app
 
 USER spring:spring

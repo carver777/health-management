@@ -3,11 +3,11 @@ package com.stringtinyst.healthlife.service;
 import com.stringtinyst.healthlife.pojo.User;
 
 public interface UserService {
-    boolean registerUser(User user);
+  boolean registerUser(User user);
 
-    String loginUser(User user);
+  String loginUser(User user);
 
-    User getUser(String userID);
+  User getUser(String userID);
 
-    boolean updateUser(User user);
+  boolean updateUser(User user);
 }

@@ -88,7 +88,7 @@
 
 - **开发环境**：
   - 前端：`pnpm dev` 启动本地服务，通过 Vite 代理转发 `/api` 请求到后端
-  - 后端：`./mvnw spring-boot:run`，使用本地 MySQL 或 docker-compose
+  - 后端：`./gradlew bootRun`，使用本地 MySQL 或 docker-compose
 
 - **生产环境**：
   - 前端构建产物由 Nginx/CDN 托管，反向代理 `/api` 到后端服务

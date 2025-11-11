@@ -17,63 +17,67 @@ import org.springframework.web.servlet.ModelAndView;
 @Component
 public class LoginCheckInterceptor implements HandlerInterceptor {
 
-    @Autowired
-    private JwtUtils jwtUtils;
+  @Autowired private JwtUtils jwtUtils;
 
-    @Override
-    public boolean preHandle(HttpServletRequest req, HttpServletResponse resp, Object handler) throws Exception {
-        String url = req.getRequestURI().toString();
+  @Override
+  public boolean preHandle(HttpServletRequest req, HttpServletResponse resp, Object handler)
+      throws Exception {
+    String url = req.getRequestURI().toString();
 
-        // 支持三种格式：1. token header  2. Authorization: Bearer <token>  3. Cookie 中的 token
-        String jwt = req.getHeader("token");
-        if (!StringUtils.hasLength(jwt)) {
-            String authorization = req.getHeader("Authorization");
-            if (StringUtils.hasLength(authorization) && authorization.startsWith("Bearer ")) {
-                jwt = authorization.substring(7); // 移除 "Bearer " 前缀
-            }
-        }
-
-        // 如果 header 中没有 token，尝试从 Cookie 中获取
-        if (!StringUtils.hasLength(jwt)) {
-            Cookie[] cookies = req.getCookies();
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
-                    if ("token".equals(cookie.getName())) {
-                        jwt = cookie.getValue();
-                        break;
-                    }
-                }
-            }
-        }
-
-        if(!StringUtils.hasLength(jwt))
-        {
-            log.warn("请求未携带 token (header/cookie): {}", url);
-            Result error = Result.error("未登录或登录已过期，请重新登录");
-            String notLogin = JSONObject.toJSONString(error);
-            resp.setContentType("application/json;charset=UTF-8");
-            resp.getWriter().write(notLogin);
-            return false;
-        }
-
-        try {
-            jwtUtils.parseJWT(jwt);
-        } catch (Exception e) {
-            log.error("Token 验证失败: {}", e.getMessage());
-            Result error = Result.error("登录已过期，请重新登录");
-            String notLogin = JSONObject.toJSONString(error);
-            resp.setContentType("application/json;charset=UTF-8");
-            resp.getWriter().write(notLogin);
-            return false;
-        }
-        return true;
+    // 支持三种格式：1. token header  2. Authorization: Bearer <token>  3. Cookie 中的 token
+    String jwt = req.getHeader("token");
+    if (!StringUtils.hasLength(jwt)) {
+      String authorization = req.getHeader("Authorization");
+      if (StringUtils.hasLength(authorization) && authorization.startsWith("Bearer ")) {
+        jwt = authorization.substring(7); // 移除 "Bearer " 前缀
+      }
     }
 
-    @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+    // 如果 header 中没有 token，尝试从 Cookie 中获取
+    if (!StringUtils.hasLength(jwt)) {
+      Cookie[] cookies = req.getCookies();
+      if (cookies != null) {
+        for (Cookie cookie : cookies) {
+          if ("token".equals(cookie.getName())) {
+            jwt = cookie.getValue();
+            break;
+          }
+        }
+      }
     }
 
-    @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    if (!StringUtils.hasLength(jwt)) {
+      log.warn("请求未携带 token (header/cookie): {}", url);
+      Result error = Result.error("未登录或登录已过期，请重新登录");
+      String notLogin = JSONObject.toJSONString(error);
+      resp.setContentType("application/json;charset=UTF-8");
+      resp.getWriter().write(notLogin);
+      return false;
     }
+
+    try {
+      jwtUtils.parseJWT(jwt);
+    } catch (Exception e) {
+      log.error("Token 验证失败: {}", e.getMessage());
+      Result error = Result.error("登录已过期，请重新登录");
+      String notLogin = JSONObject.toJSONString(error);
+      resp.setContentType("application/json;charset=UTF-8");
+      resp.getWriter().write(notLogin);
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public void postHandle(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Object handler,
+      ModelAndView modelAndView)
+      throws Exception {}
+
+  @Override
+  public void afterCompletion(
+      HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+      throws Exception {}
 }

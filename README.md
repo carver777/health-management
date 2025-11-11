@@ -49,8 +49,8 @@
 
 ## 技术栈
 
-**前端** Vue 3 + Nuxt 4 + TypeScript + NuxtUI
-**后端** Java 17 + Spring Boot 3.4 + MySQL
+- **前端**: Vue 3 + Nuxt 4 + TypeScript + NuxtUI
+- **后端**: Java 17 + Spring Boot 3.4 + MySQL
 
 详细技术栈与开发指南请查看：
 
