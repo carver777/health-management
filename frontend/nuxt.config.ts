@@ -1,4 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+// @ts-expect-error process is available in Node.js environment
+const apiBaseUrl = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080'
+
 export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
 
@@ -41,7 +45,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: '/api'
+      apiBase: apiBaseUrl
     }
   },
 
@@ -58,45 +62,11 @@ export default defineNuxtConfig({
     '/exercise': { ssr: false },
     '/profile': { ssr: false },
 
-    // API 路由 - CORS 支持
-    '/api/**': { cors: true }
+    // API 代理 - 将 /api 请求代理到后端服务器
+    '/api/**': { proxy: { to: apiBaseUrl + '/**' } }
   },
 
   compatibilityDate: '2025-01-15',
-
-  vite: {
-    server: {
-      proxy:
-        import.meta.env.ENABLE_API_PROXY === 'true'
-          ? {
-              '/api': {
-                target: import.meta.env.API_TARGET || 'http://localhost:8080',
-                changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, ''),
-
-                bypass: (req) => {
-                  const path = req.url || ''
-                  if (path.includes('/_nuxt_icon/')) {
-                    return path.replace('/api', '')
-                  }
-                  return null
-                },
-
-                configure: (proxy) => {
-                  // 禁用压缩，避免 Vite 代理处理 gzip 出现问题
-                  const proxyWithEvents = proxy as unknown as {
-                    on: (event: string, handler: (proxyReq: unknown) => void) => void
-                  }
-                  proxyWithEvents.on('proxyReq', (proxyReq: unknown) => {
-                    const req = proxyReq as { setHeader: (name: string, value: string) => void }
-                    req.setHeader('Accept-Encoding', 'identity')
-                  })
-                }
-              }
-            }
-          : undefined
-    }
-  },
 
   eslint: {
     config: {
