@@ -57,8 +57,6 @@ health-management/
 │   │   └── default.vue               # 默认布局（导航栏）
 │   ├── middleware/
 │   │   └── auth.ts                   # 认证中间件
-│   ├── plugins/
-│   │   └── auth.client.ts            # 客户端认证插件
 │   ├── pages/
 │   │   ├── index.vue                 # 首页（预渲染）
 │   │   ├── login.vue                 # 登录/注册（预渲染）
@@ -68,6 +66,8 @@ health-management/
 │   │   ├── exercise.vue              # 运动管理（CSR）
 │   │   ├── chat.vue                  # AI 咨询（CSR）
 │   │   └── profile.vue               # 个人中心（CSR）
+│   ├── plugins/
+│   │   └── auth.client.ts            # 客户端认证插件
 │   ├── types/
 │   │   └── index.ts                  # TypeScript 类型定义
 │   ├── utils/
@@ -191,7 +191,7 @@ pnpm typecheck
 
 ### 开发环境代理
 
-编辑 `.env` 文件，默认转发到 `localhost`，需自行配置后端 ip：
+编辑 `.env` 文件，默认转发到 `localhost`，需自行配置后端 ip
 
 ### 生产环境
 
