@@ -302,7 +302,7 @@ function useDisplayedYearRange(
           <UButton
             color="neutral"
             variant="ghost"
-            icon="lucide:chevron-left"
+            icon="i-heroicons-chevron-left"
             square
             :disabled="!canDecreaseDisplayedYear"
             @click="changeDisplayedYear('prev')"
@@ -315,7 +315,7 @@ function useDisplayedYearRange(
           <UButton
             color="neutral"
             variant="ghost"
-            icon="lucide:chevron-right"
+            icon="i-heroicons-chevron-right"
             square
             :disabled="!canIncreaseDisplayedYear"
             @click="changeDisplayedYear('next')"
@@ -349,7 +349,7 @@ function useDisplayedYearRange(
           <UButton
             color="neutral"
             variant="ghost"
-            icon="lucide:chevron-left"
+            icon="i-heroicons-chevron-left"
             square
             :disabled="!canDecreaseDisplayedYearRange"
             @click="changeDisplayedYearRange('prev')"
@@ -364,7 +364,7 @@ function useDisplayedYearRange(
           <UButton
             color="neutral"
             variant="ghost"
-            icon="lucide:chevron-right"
+            icon="i-heroicons-chevron-right"
             square
             :disabled="!canIncreaseDisplayedYearRange"
             @click="changeDisplayedYearRange('next')"

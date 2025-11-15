@@ -247,7 +247,7 @@ const loadHealthStats = async () => {
       healthStats.totalRecords.body = bodyResponse.data.total || 0
     }
   } catch (error) {
-    console.error('加载健康统计失败:', error)
+    console.error('Failed to load health stats:', error)
   }
 }
 

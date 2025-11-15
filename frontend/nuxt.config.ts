@@ -4,7 +4,7 @@
 const apiBaseUrl = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080'
 
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxt/ui'],
+  modules: ['@nuxt/eslint', '@nuxt/icon', '@nuxt/ui'],
 
   components: [
     {
@@ -50,11 +50,11 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    // 公开页面 - 预渲染（SEO + 性能）
+    // 公开页面 - 预渲染
     '/': { prerender: true },
     '/login': { prerender: true },
 
-    // 管理后台页面 - 客户端渲染（交互优先）
+    // 管理后台页面 - 客户端渲染
     '/dashboard': { ssr: false },
     '/chat': { ssr: false },
     '/body-data': { ssr: false },
@@ -62,7 +62,7 @@ export default defineNuxtConfig({
     '/exercise': { ssr: false },
     '/profile': { ssr: false },
 
-    // API 代理 - 将 /api 请求代理到后端服务器
+    // 将 /api 请求代理到后端服务器
     '/api/**': { proxy: { to: apiBaseUrl + '/**' } }
   },
 
@@ -74,6 +74,14 @@ export default defineNuxtConfig({
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  icon: {
+    serverBundle: 'local',
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 512
     }
   }
 })

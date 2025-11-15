@@ -130,7 +130,7 @@ export const useAuth = () => {
   }
 
   // 获取用户信息
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = async (silent = false) => {
     if (!token.value) {
       return false
     }
@@ -147,7 +147,6 @@ export const useAuth = () => {
 
       if (response.code === 1 && response.data) {
         user.value = response.data
-        await fetchAvatar()
         return true
       } else {
         throw new Error(response.msg || '获取用户信息失败')
@@ -156,12 +155,14 @@ export const useAuth = () => {
       const apiError = error as ApiError
 
       if (apiError.response?.status === 401) {
-        logout()
-        getToast().add({
-          title: '登录已过期',
-          description: '请重新登录',
-          color: 'warning'
-        })
+        logout(silent)
+        if (!silent) {
+          getToast().add({
+            title: '登录已过期',
+            description: '请重新登录',
+            color: 'warning'
+          })
+        }
         return false
       }
 
@@ -187,13 +188,14 @@ export const useAuth = () => {
         URL.revokeObjectURL(avatarUrl.value)
       }
 
-      if (import.meta.client && response) {
+      if (import.meta.client && response && response.size > 0) {
         avatarUrl.value = URL.createObjectURL(response)
         return true
       }
 
       return false
     } catch {
+      // 清理旧的头像 URL
       if (import.meta.client && avatarUrl.value && avatarUrl.value.startsWith('blob:')) {
         URL.revokeObjectURL(avatarUrl.value)
       }
@@ -239,7 +241,7 @@ export const useAuth = () => {
   }
 
   // 退出登录
-  const logout = () => {
+  const logout = (silent = false) => {
     user.value = null
     token.value = null
     userID.value = null
@@ -250,10 +252,12 @@ export const useAuth = () => {
     }
     avatarUrl.value = null
 
-    getToast().add({
-      title: '已退出登录',
-      color: 'neutral'
-    })
+    if (!silent) {
+      getToast().add({
+        title: '已退出登录',
+        color: 'neutral'
+      })
+    }
   }
 
   // 初始化

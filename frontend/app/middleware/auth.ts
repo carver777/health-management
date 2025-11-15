@@ -1,6 +1,5 @@
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   // 仅在客户端执行认证检查
-  // 因为受保护的路由都是 CSR，不会在服务端渲染
   if (import.meta.server) return
 
   const config = useRuntimeConfig().public
@@ -9,7 +8,28 @@ export default defineNuxtRouteMiddleware((to) => {
   const token = useCookie('token')
   const publicRoutes = ['/login', '/register', '/']
 
-  if (!token.value && !publicRoutes.includes(to.path)) {
+  // 如果是公开路由，直接放行
+  if (publicRoutes.includes(to.path)) {
+    return
+  }
+
+  // 如果没有 token，跳转到登录页
+  if (!token.value) {
+    return navigateTo('/login')
+  }
+
+  try {
+    const { isLoggedIn, fetchUserProfile } = useAuth()
+
+    // 如果已登录且有用户信息，直接放行
+    if (isLoggedIn.value) {
+      const hasProfile = await fetchUserProfile()
+      if (!hasProfile) {
+        // token 无效，清除并跳转到登录页
+        return navigateTo('/login')
+      }
+    }
+  } catch {
     return navigateTo('/login')
   }
 })

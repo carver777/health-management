@@ -34,7 +34,9 @@
           <UNavigationMenu :collapsed="collapsed" :items="menuItems" orientation="vertical" />
 
           <div class="mt-auto border-t border-gray-200 pt-4 dark:border-gray-800">
-            <UDashboardSidebarCollapse />
+            <UDashboardSidebarCollapse
+              :icon="collapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'"
+            />
           </div>
         </div>
       </template>
@@ -52,8 +54,11 @@
             trailing-icon="i-heroicons-chevron-up"
           >
             <template #leading>
-              <UAvatar v-if="userStore.avatarUrl" :src="userStore.avatarUrl" size="xs" />
-              <UIcon v-else name="i-heroicons-user" class="text-lg" />
+              <UAvatar
+                :src="userStore.avatarUrl || undefined"
+                :alt="userStore.user.nickname"
+                size="xs"
+              />
             </template>
           </UButton>
         </UDropdownMenu>
