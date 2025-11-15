@@ -330,7 +330,7 @@ const handleDialogSuccess = () => {
       <div class="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg">
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
               <UIcon name="i-heroicons-chart-pie" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">
@@ -348,7 +348,7 @@ const handleDialogSuccess = () => {
 
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg">
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
               <UIcon name="i-heroicons-cake" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">
@@ -366,7 +366,7 @@ const handleDialogSuccess = () => {
 
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg">
+            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
               <UIcon name="i-heroicons-bolt" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">

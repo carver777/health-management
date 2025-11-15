@@ -290,7 +290,7 @@ onUnmounted(() => {
   <UPage>
     <UPageHeader title="健康咨询" description="与 AI 助手交流，获取健康管理建议" />
 
-    <UPageBody class="flex h-[calc(100vh-80px)] flex-col !p-0">
+    <UPageBody class="flex h-[calc(100vh-80px)] flex-col p-0!">
       <!-- 聊天记录区域 - 固定高度，可滚动 -->
       <div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
         <!-- 空状态 -->
@@ -311,7 +311,7 @@ onUnmounted(() => {
             :class="['flex gap-3', message.role === 'user' ? 'flex-row-reverse' : '']"
           >
             <!-- 图标 -->
-            <div :class="['flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full']">
+            <div :class="['flex h-10 w-10 shrink-0 items-center justify-center rounded-full']">
               <UIcon
                 :name="message.role === 'user' ? 'i-heroicons-user' : 'i-heroicons-sparkles'"
                 class="text-lg"
@@ -357,7 +357,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 聊天输入框 - 固定在底部 -->
-      <div class="flex-shrink-0 border-t border-default px-4 py-4 sm:px-6">
+      <div class="shrink-0 border-t border-default px-4 py-4 sm:px-6">
         <!-- 快捷提示（仅在输入为空时显示） -->
         <div v-if="!input.trim() && !isLoading" class="mb-3">
           <p class="mb-2 text-xs font-medium opacity-60">向我问点什么...</p>

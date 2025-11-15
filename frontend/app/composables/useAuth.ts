@@ -82,6 +82,8 @@ export const useAuth = () => {
         })
 
         await fetchUserProfile()
+        await checkAndLoadAvatar()
+
         return true
       } else {
         // 后端返回失败信息
@@ -209,6 +211,33 @@ export const useAuth = () => {
     return await fetchAvatar()
   }
 
+  // 检查并加载头像（用于登录后初始化）
+  const checkAndLoadAvatar = async () => {
+    if (!token.value || !import.meta.client) return
+
+    try {
+      await $fetch('/api/user/avatar', {
+        method: 'HEAD',
+        headers: {
+          Authorization: `Bearer ${token.value}`
+        }
+      })
+
+      // 头像存在，设置时间戳，否则清除
+      const timestamp = Date.now().toString()
+      localStorage.setItem('avatarTimestamp', timestamp)
+
+      // 更新共享状态
+      const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
+      sharedAvatarUrl.value = `/api/user/avatar?t=${timestamp}`
+    } catch {
+      localStorage.removeItem('avatarTimestamp')
+
+      const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
+      sharedAvatarUrl.value = ''
+    }
+  }
+
   // 更新用户信息
   const updateProfile = async (profileData: Partial<User>) => {
     try {
@@ -252,6 +281,14 @@ export const useAuth = () => {
     }
     avatarUrl.value = null
 
+    // 清除 localStorage 中的头像时间戳以及共享的头像 URL 状态
+    if (import.meta.client) {
+      localStorage.removeItem('avatarTimestamp')
+    }
+
+    const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
+    sharedAvatarUrl.value = ''
+
     if (!silent) {
       getToast().add({
         title: '已退出登录',
@@ -280,6 +317,7 @@ export const useAuth = () => {
     fetchUserProfile,
     fetchAvatar,
     updateAvatar,
+    checkAndLoadAvatar,
     updateProfile,
     logout,
     init

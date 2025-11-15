@@ -42,26 +42,29 @@
       </template>
 
       <template #footer="{ collapsed }">
-        <UDropdownMenu
-          :items="accountMenuItems"
-          :content="{ align: 'end', side: 'top', sideOffset: 8 }"
-        >
-          <UButton
-            :label="collapsed ? undefined : '账户操作'"
-            color="neutral"
-            variant="ghost"
-            block
-            trailing-icon="i-heroicons-chevron-up"
+        <ClientOnly>
+          <UDropdownMenu
+            :items="accountMenuItems"
+            :content="{ align: 'end', side: 'top', sideOffset: 8 }"
           >
-            <template #leading>
-              <UAvatar
-                :src="userStore.avatarUrl || undefined"
-                :alt="userStore.user.nickname"
-                size="xs"
-              />
-            </template>
-          </UButton>
-        </UDropdownMenu>
+            <UButton
+              :label="collapsed ? undefined : '账户操作'"
+              color="neutral"
+              variant="ghost"
+              block
+              trailing-icon="i-heroicons-chevron-up"
+            >
+              <template #leading>
+                <UAvatar
+                  :src="userStore.avatarUrl || undefined"
+                  :alt="userStore.user.nickname"
+                  size="xs"
+                  icon="i-heroicons-user"
+                />
+              </template>
+            </UButton>
+          </UDropdownMenu>
+        </ClientOnly>
       </template>
     </UDashboardSidebar>
 
@@ -89,13 +92,25 @@ import type { NavigationMenuItem, DropdownMenuItem } from '@nuxt/ui'
 
 const router = useRouter()
 const route = useRoute()
-const { user, avatarUrl, logout } = useAuth()
+const { user, logout } = useAuth()
+const tokenCookie = useCookie('token')
 
 const isCollapsed = ref(false)
 
+// 使用全局共享的头像 URL 状态
+const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
+  if (import.meta.client) {
+    const timestamp = localStorage.getItem('avatarTimestamp')
+    if (timestamp && tokenCookie.value) {
+      return `/api/user/avatar?t=${timestamp}`
+    }
+  }
+  return ''
+})
+
 const userStore = computed(() => ({
   user: user.value || { nickname: '用户' },
-  avatarUrl: avatarUrl.value || ''
+  avatarUrl: sharedAvatarUrl.value
 }))
 
 const menuItems = computed<NavigationMenuItem[]>(() => [

@@ -31,6 +31,17 @@ const userInfo = reactive({
 // 头像文件
 const avatarFile = ref<File | null>(null)
 
+// 使用全局共享的头像 URL 状态
+const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
+  if (import.meta.client) {
+    const timestamp = localStorage.getItem('avatarTimestamp')
+    if (timestamp && tokenCookie.value) {
+      return `/api/user/avatar?t=${timestamp}`
+    }
+  }
+  return ''
+})
+
 // 健康统计
 const healthStats = reactive({
   totalRecords: {
@@ -73,15 +84,12 @@ const goalsForm = reactive({
 
 // 创建头像 URL
 const avatarUrl = computed(() => {
+  // 如果选择了新文件，显示预览
   if (avatarFile.value) {
     return URL.createObjectURL(avatarFile.value)
   }
-  // 如果用户已登录，使用 API 端点获取头像
-  if (userInfo.userID) {
-    // 添加时间戳参数以避免缓存
-    return `/api/user/avatar?t=${Date.now()}`
-  }
-  return ''
+  // 否则使用共享的头像 URL
+  return sharedAvatarUrl.value
 })
 
 // 格式化日期
@@ -114,10 +122,15 @@ const uploadAvatar = async () => {
     })
 
     if (response.code === 1) {
-      // 上传成功后重新加载用户信息以获取新头像URL
-      await loadUserData()
-      // 清除选择的文件
+      // 上传成功后更新时间戳并更新共享状态
+      const newTimestamp = Date.now().toString()
+      if (import.meta.client) {
+        localStorage.setItem('avatarTimestamp', newTimestamp)
+      }
+
+      sharedAvatarUrl.value = `/api/user/avatar?t=${newTimestamp}`
       avatarFile.value = null
+
       toast.add({
         title: '头像上传成功',
         color: 'success'
