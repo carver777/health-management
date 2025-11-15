@@ -56,8 +56,8 @@
             >
               <template #leading>
                 <UAvatar
-                  :src="userStore.avatarUrl || undefined"
-                  :alt="userStore.user.nickname"
+                  :src="userInfo.avatarUrl || undefined"
+                  :alt="userInfo.user.nickname"
                   size="xs"
                   icon="i-heroicons-user"
                 />
@@ -108,7 +108,7 @@ const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
   return ''
 })
 
-const userStore = computed(() => ({
+const userInfo = computed(() => ({
   user: user.value || { nickname: '用户' },
   avatarUrl: sharedAvatarUrl.value
 }))

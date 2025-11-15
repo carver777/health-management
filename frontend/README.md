@@ -16,9 +16,9 @@
 
 ### 状态管理与数据请求
 
-- **Pinia** - Vue 官方状态管理库
+- **useState** - Nuxt 内置的状态管理
 - **useFetch** - Nuxt 内置的数据请求组合式函数
-- **VueUse** - Vue 组合式 API 工具集
+- **useCookie** - Nuxt 内置的 Cookie 管理
 
 ### 图表与可视化
 
