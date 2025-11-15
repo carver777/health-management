@@ -57,6 +57,8 @@ health-management/
 │   │   └── default.vue               # 默认布局（导航栏）
 │   ├── middleware/
 │   │   └── auth.ts                   # 认证中间件
+│   ├── plugins/
+│   │   └── auth.client.ts            # 客户端认证插件
 │   ├── pages/
 │   │   ├── index.vue                 # 首页（预渲染）
 │   │   ├── login.vue                 # 登录/注册（预渲染）
@@ -203,6 +205,6 @@ pnpm typecheck
 ## 认证机制
 
 - JWT Token 认证
-- 自动刷新机制
+- 客户端启动时自动初始化认证状态
 - 路由守卫保护
-- 登录状态持久化
+- 登录状态持久化（Cookie + useState）
