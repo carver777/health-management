@@ -3,31 +3,24 @@ import type { DateValue } from '@internationalized/date'
 import type { FormSubmitEvent } from '#ui/types'
 import { z } from 'zod'
 
-definePageMeta({
-  layout: 'blank'
-})
+definePageMeta({ layout: 'blank' })
 
 const { login, register } = useAuth()
-const route = useRoute()
-const isRegister = ref(route.query.mode === 'register')
+const isRegister = ref(useRoute().query.mode === 'register')
 
-// 登录表单 Schema
+const passwordSchema = z.string().min(6, '密码长度至少 6 个字符')
+
 const loginSchema = z.object({
   email: z.email('请输入正确的邮箱格式'),
-  password: z.string().min(1, '请输入密码').min(6, '密码长度至少 6 个字符')
+  password: passwordSchema
 })
 
-// 注册表单 Schema
 const registerSchema = z
   .object({
-    nickname: z
-      .string()
-      .min(1, '请输入昵称')
-      .min(2, '昵称长度至少 2 个字符')
-      .max(20, '昵称长度最多 20 个字符'),
+    nickname: z.string().min(2, '昵称长度至少 2 个字符').max(20, '昵称长度最多 20 个字符'),
     email: z.email('请输入正确的邮箱格式'),
-    password: z.string().min(1, '请输入密码').min(6, '密码长度至少 6 个字符'),
-    confirmPassword: z.string().min(1, '请确认密码'),
+    password: passwordSchema,
+    confirmPassword: passwordSchema,
     gender: z.enum(['男', '女'], { message: '请选择性别' })
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -38,13 +31,7 @@ const registerSchema = z
 type LoginSchema = z.output<typeof loginSchema>
 type RegisterSchema = z.output<typeof registerSchema>
 
-// 登录表单状态
-const loginState = reactive<LoginSchema>({
-  email: '',
-  password: ''
-})
-
-// 注册表单状态
+const loginState = reactive<LoginSchema>({ email: '', password: '' })
 const registerState = reactive<RegisterSchema>({
   nickname: '',
   email: '',
@@ -53,78 +40,53 @@ const registerState = reactive<RegisterSchema>({
   gender: '男'
 })
 
-// 使用 DateValue 类型，默认设置为今天
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 const dateOfBirthError = ref('')
+const showPassword = reactive({ login: false, register: false, confirm: false })
 
-function validateDateOfBirth(): boolean {
-  if (!calendarValue.value) {
-    dateOfBirthError.value = '请选择出生日期'
-    return false
-  }
-  dateOfBirthError.value = ''
-  return true
-}
-
-function toggleMode() {
-  isRegister.value = !isRegister.value
-  resetForm()
-}
-
-function resetForm() {
-  // 重置登录表单
-  loginState.email = ''
-  loginState.password = ''
-
-  // 重置注册表单
-  registerState.nickname = ''
-  registerState.email = ''
-  registerState.password = ''
-  registerState.confirmPassword = ''
-  registerState.gender = '男'
-
-  // 重置日期选择器
+const resetForm = () => {
+  Object.assign(loginState, { email: '', password: '' })
+  Object.assign(registerState, {
+    nickname: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    gender: '男'
+  })
   calendarValue.value = getTodayDateValue()
   dateOfBirthError.value = ''
-}
-
-function formatDateOfBirth(): string {
-  if (!calendarValue.value) return '请选择出生日期'
-  return dateValueToString(calendarValue.value)
+  Object.assign(showPassword, { login: false, register: false, confirm: false })
 }
 
 async function onLoginSubmit(event: FormSubmitEvent<LoginSchema>) {
-  const loginData = {
-    email: event.data.email,
-    password: event.data.password
-  }
-
-  const success = await login(loginData)
-  if (success) {
-    await navigateTo('/dashboard')
-  }
+  if (await login(event.data)) await navigateTo('/dashboard')
 }
 
 async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
-  // 验证出生日期
-  if (!validateDateOfBirth()) {
+  if (!calendarValue.value) {
+    dateOfBirthError.value = '请选择出生日期'
     return
   }
 
-  const dateOfBirth = calendarValue.value ? dateValueToString(calendarValue.value) : ''
-  const registerData = {
-    email: event.data.email,
-    password: event.data.password,
-    nickname: event.data.nickname,
-    gender: event.data.gender,
-    dateOfBirth
-  }
+  const success = await register({
+    ...event.data,
+    dateOfBirth: dateValueToString(calendarValue.value)
+  })
 
-  const success = await register(registerData)
   if (success) {
     isRegister.value = false
     resetForm()
   }
+}
+
+function switchToRegister() {
+  isRegister.value = true
+  resetForm()
+}
+
+function switchToLogin() {
+  isRegister.value = false
+  resetForm()
 }
 </script>
 
@@ -154,23 +116,28 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
         </UFormField>
 
         <UFormField label="密码" name="password">
-          <UInput v-model="loginState.password" type="password" placeholder="请输入密码" size="lg">
+          <UInput
+            v-model="loginState.password"
+            :type="showPassword.login ? 'text' : 'password'"
+            placeholder="请输入密码"
+            size="lg"
+          >
             <template #leading>
               <UIcon name="i-heroicons-lock-closed" />
+            </template>
+            <template #trailing>
+              <UIcon
+                :name="showPassword.login ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="cursor-pointer"
+                @click="showPassword.login = !showPassword.login"
+              />
             </template>
           </UInput>
         </UFormField>
 
-        <div class="pt-2">
-          <UButton type="submit" block size="lg" color="primary">
-            <template #leading>
-              <UIcon name="i-heroicons-check" />
-            </template>
-            立即登录
-          </UButton>
-        </div>
+        <UButton type="submit" block size="lg" color="primary" class="mt-2"> 立即登录 </UButton>
 
-        <UButton variant="ghost" block color="neutral" @click="toggleMode">
+        <UButton variant="ghost" block color="neutral" @click="switchToRegister">
           没有账户？点击注册
         </UButton>
       </UForm>
@@ -202,12 +169,19 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
         <UFormField label="密码" name="password">
           <UInput
             v-model="registerState.password"
-            type="password"
+            :type="showPassword.register ? 'text' : 'password'"
             placeholder="请输入密码"
             size="lg"
           >
             <template #leading>
               <UIcon name="i-heroicons-lock-closed" />
+            </template>
+            <template #trailing>
+              <UIcon
+                :name="showPassword.register ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="cursor-pointer"
+                @click="showPassword.register = !showPassword.register"
+              />
             </template>
           </UInput>
         </UFormField>
@@ -215,12 +189,19 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
         <UFormField label="确认密码" name="confirmPassword">
           <UInput
             v-model="registerState.confirmPassword"
-            type="password"
+            :type="showPassword.confirm ? 'text' : 'password'"
             placeholder="请再次输入密码"
             size="lg"
           >
             <template #leading>
               <UIcon name="i-heroicons-lock-closed" />
+            </template>
+            <template #trailing>
+              <UIcon
+                :name="showPassword.confirm ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="cursor-pointer"
+                @click="showPassword.confirm = !showPassword.confirm"
+              />
             </template>
           </UInput>
         </UFormField>
@@ -238,31 +219,20 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
           </div>
         </UFormField>
 
-        <div class="space-y-1.5">
-          <label class="block text-sm font-medium">出生日期</label>
+        <UFormField label="出生日期" :error="dateOfBirthError">
           <DatePicker
             v-model="calendarValue"
             block
             size="lg"
-            :placeholder="formatDateOfBirth()"
+            placeholder="请选择出生日期"
             :min-value="createCalendarDate(1900, 1, 1)"
             :max-value="createCalendarDate(2050, 12, 31)"
           />
-          <p v-if="dateOfBirthError" class="text-sm">
-            {{ dateOfBirthError }}
-          </p>
-        </div>
+        </UFormField>
 
-        <div class="pt-2">
-          <UButton type="submit" block size="lg" color="primary">
-            <template #leading>
-              <UIcon name="i-heroicons-check" />
-            </template>
-            注册账户
-          </UButton>
-        </div>
+        <UButton type="submit" block size="lg" color="primary" class="mt-2"> 注册账户 </UButton>
 
-        <UButton variant="ghost" block color="neutral" @click="toggleMode">
+        <UButton variant="ghost" block color="neutral" @click="switchToLogin">
           已有账户？点击登录
         </UButton>
       </UForm>
