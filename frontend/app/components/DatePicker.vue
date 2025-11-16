@@ -8,6 +8,8 @@ interface Props {
   placeholder?: string
   block?: boolean
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  id?: string
+  name?: string
 }
 
 interface Emits {
@@ -50,9 +52,17 @@ const handleDateSelect = (value: any) => {
 
 <template>
   <UPopover v-model:open="showDatePicker">
-    <UButton :block="block" variant="outline" color="neutral" :size="size" class="justify-start">
+    <UButton
+      :id="id"
+      :name="name"
+      :block="block"
+      variant="outline"
+      color="neutral"
+      :size="size"
+      class="justify-start"
+    >
       <template #leading>
-        <UIcon name="i-heroicons-calendar" />
+        <UIcon name="heroicons:calendar" />
       </template>
       {{ displayValue }}
     </UButton>

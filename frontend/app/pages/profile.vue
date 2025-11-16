@@ -343,16 +343,6 @@ const saveBasicInfo = async () => {
   }
 }
 
-// 编辑健康目标
-const editGoals = () => {
-  // 初始化表单数据
-  goalsForm.targetWeight = goals.targetWeight
-  goalsForm.dailyCaloriesIntake = goals.dailyCaloriesIntake
-  goalsForm.dailyCaloriesBurn = goals.dailyCaloriesBurn
-
-  showGoalsDialog.value = true
-}
-
 // 保存健康目标
 const saveGoals = async () => {
   if (
@@ -527,7 +517,7 @@ onMounted(() => {
                   size="xs"
                   color="primary"
                   variant="soft"
-                  icon="i-heroicons-pencil"
+                  icon="heroicons:pencil"
                   @click="editBasicInfo"
                 >
                   编辑
@@ -542,7 +532,7 @@ onMounted(() => {
                   :src="avatarUrl"
                   :alt="userInfo.nickname"
                   size="3xl"
-                  icon="i-heroicons-user"
+                  icon="heroicons:user"
                   class="ring-2 ring-gray-200 dark:ring-gray-700"
                 />
 
@@ -554,7 +544,7 @@ onMounted(() => {
                         :label="avatarFile ? '更换头像' : '上传头像'"
                         color="primary"
                         variant="outline"
-                        icon="i-heroicons-arrow-up-tray"
+                        icon="heroicons:arrow-up-tray"
                         block
                         @click="open()"
                       />
@@ -653,8 +643,15 @@ onMounted(() => {
                 size="xs"
                 color="success"
                 variant="soft"
-                icon="i-heroicons-cog-6-tooth"
-                @click="editGoals"
+                icon="heroicons:cog-6-tooth"
+                @click="
+                  () => {
+                    goalsForm.targetWeight = goals.targetWeight
+                    goalsForm.dailyCaloriesIntake = goals.dailyCaloriesIntake
+                    goalsForm.dailyCaloriesBurn = goals.dailyCaloriesBurn
+                    showGoalsDialog = true
+                  }
+                "
               >
                 设置目标
               </UButton>
@@ -707,16 +704,17 @@ onMounted(() => {
     </UPageBody>
 
     <!-- 编辑基本信息对话框 -->
-    <UModal v-model:open="showEditDialog" title="编辑基本信息">
+    <UModal v-model:open="showEditDialog" title="编辑基本信息" description="修改您的个人基本信息">
       <template #body="{ close }">
         <div class="space-y-4">
           <div>
-            <label class="mb-2 block text-sm font-medium">昵称</label>
-            <UInput v-model="editForm.nickname" placeholder="请输入昵称" />
+            <label for="edit-nickname" class="mb-2 block text-sm font-medium">昵称</label>
+            <UInput id="edit-nickname" v-model="editForm.nickname" placeholder="请输入昵称" />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium">性别</label>
+            <label for="edit-gender" class="mb-2 block text-sm font-medium">性别</label>
             <USelect
+              id="edit-gender"
               v-model="editForm.gender"
               :items="[
                 { label: '男', value: '男' },
@@ -726,8 +724,8 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium">出生日期</label>
-            <DatePicker v-model="calendarValue" block />
+            <label for="edit-birth-date" class="mb-2 block text-sm font-medium">出生日期</label>
+            <DatePicker id="edit-birth-date" v-model="calendarValue" block />
           </div>
 
           <div class="flex justify-end gap-2 pt-4">
@@ -739,28 +737,35 @@ onMounted(() => {
     </UModal>
 
     <!-- 设置健康目标对话框 -->
-    <UModal v-model:open="showGoalsDialog" title="设置健康目标">
+    <UModal v-model:open="showGoalsDialog" title="设置健康目标" description="设置您的每日健康目标">
       <template #body="{ close }">
         <div class="space-y-4">
           <div>
-            <label class="mb-2 block text-sm font-medium">每日卡路里摄入目标 (kcal)</label>
+            <label for="goal-calories-intake" class="mb-2 block text-sm font-medium"
+              >每日卡路里摄入目标 (kcal)</label
+            >
             <UInput
+              id="goal-calories-intake"
               v-model.number="goalsForm.dailyCaloriesIntake"
               type="number"
               placeholder="请输入目标值"
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium">每日卡路里消耗目标 (kcal)</label>
+            <label for="goal-calories-burn" class="mb-2 block text-sm font-medium"
+              >每日卡路里消耗目标 (kcal)</label
+            >
             <UInput
+              id="goal-calories-burn"
               v-model.number="goalsForm.dailyCaloriesBurn"
               type="number"
               placeholder="请输入目标值"
             />
           </div>
           <div>
-            <label class="mb-2 block text-sm font-medium">目标体重 (kg)</label>
+            <label for="goal-weight" class="mb-2 block text-sm font-medium">目标体重 (kg)</label>
             <UInput
+              id="goal-weight"
               v-model.number="goalsForm.targetWeight"
               type="number"
               step="0.1"

@@ -78,7 +78,9 @@ export default defineNuxtConfig({
   },
 
   icon: {
-    serverBundle: 'local',
+    serverBundle: {
+      collections: ['heroicons', 'lucide', 'mdi', 'simple-icons']
+    },
     clientBundle: {
       scan: true,
       sizeLimitKb: 512

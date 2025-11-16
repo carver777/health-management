@@ -110,7 +110,7 @@ function switchToLogin() {
         <UFormField label="邮箱" name="email">
           <UInput v-model="loginState.email" type="email" placeholder="请输入邮箱" size="lg">
             <template #leading>
-              <UIcon name="i-heroicons-envelope" />
+              <UIcon name="heroicons:envelope" />
             </template>
           </UInput>
         </UFormField>
@@ -123,11 +123,11 @@ function switchToLogin() {
             size="lg"
           >
             <template #leading>
-              <UIcon name="i-heroicons-lock-closed" />
+              <UIcon name="heroicons:lock-closed" />
             </template>
             <template #trailing>
               <UIcon
-                :name="showPassword.login ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                :name="showPassword.login ? 'heroicons:eye-slash' : 'heroicons:eye'"
                 class="cursor-pointer"
                 @click="showPassword.login = !showPassword.login"
               />
@@ -153,7 +153,7 @@ function switchToLogin() {
         <UFormField label="昵称" name="nickname">
           <UInput v-model="registerState.nickname" placeholder="请输入昵称" size="lg">
             <template #leading>
-              <UIcon name="i-heroicons-user" />
+              <UIcon name="heroicons:user" />
             </template>
           </UInput>
         </UFormField>
@@ -161,7 +161,7 @@ function switchToLogin() {
         <UFormField label="邮箱" name="email">
           <UInput v-model="registerState.email" type="email" placeholder="请输入邮箱" size="lg">
             <template #leading>
-              <UIcon name="i-heroicons-envelope" />
+              <UIcon name="heroicons:envelope" />
             </template>
           </UInput>
         </UFormField>
@@ -174,11 +174,11 @@ function switchToLogin() {
             size="lg"
           >
             <template #leading>
-              <UIcon name="i-heroicons-lock-closed" />
+              <UIcon name="heroicons:lock-closed" />
             </template>
             <template #trailing>
               <UIcon
-                :name="showPassword.register ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                :name="showPassword.register ? 'heroicons:eye-slash' : 'heroicons:eye'"
                 class="cursor-pointer"
                 @click="showPassword.register = !showPassword.register"
               />
@@ -194,11 +194,11 @@ function switchToLogin() {
             size="lg"
           >
             <template #leading>
-              <UIcon name="i-heroicons-lock-closed" />
+              <UIcon name="heroicons:lock-closed" />
             </template>
             <template #trailing>
               <UIcon
-                :name="showPassword.confirm ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                :name="showPassword.confirm ? 'heroicons:eye-slash' : 'heroicons:eye'"
                 class="cursor-pointer"
                 @click="showPassword.confirm = !showPassword.confirm"
               />

@@ -77,28 +77,28 @@ watch(isOpen, (val) => {
 
 // 运动类型选项
 const exerciseTypeOptions = [
-  { label: '跑步', value: '跑步' },
-  { label: '游泳', value: '游泳' },
-  { label: '骑行', value: '骑行' },
-  { label: '徒步', value: '徒步' },
-  { label: '爬山', value: '爬山' },
-  { label: '跳绳', value: '跳绳' },
-  { label: '篮球', value: '篮球' },
-  { label: '足球', value: '足球' },
-  { label: '羽毛球', value: '羽毛球' },
-  { label: '乒乓球', value: '乒乓球' },
-  { label: '网球', value: '网球' },
-  { label: '健身房训练', value: '健身房训练' },
-  { label: '瑜伽', value: '瑜伽' },
-  { label: '普拉提', value: '普拉提' },
-  { label: '力量训练', value: '力量训练' }
+  { label: '跑步', value: '跑步', icon: 'mdi:run' },
+  { label: '游泳', value: '游泳', icon: 'mdi:swim' },
+  { label: '骑行', value: '骑行', icon: 'mdi:bike' },
+  { label: '徒步', value: '徒步', icon: 'mdi:walk' },
+  { label: '爬山', value: '爬山', icon: 'mdi:image-filter-hdr' },
+  { label: '跳绳', value: '跳绳', icon: 'mdi:jump-rope' },
+  { label: '篮球', value: '篮球', icon: 'mdi:basketball' },
+  { label: '足球', value: '足球', icon: 'mdi:soccer' },
+  { label: '羽毛球', value: '羽毛球', icon: 'mdi:badminton' },
+  { label: '乒乓球', value: '乒乓球', icon: 'mdi:table-tennis' },
+  { label: '网球', value: '网球', icon: 'mdi:tennis' },
+  { label: '健身房训练', value: '健身房训练', icon: 'mdi:dumbbell' },
+  { label: '瑜伽', value: '瑜伽', icon: 'mdi:yoga' },
+  { label: '普拉提', value: '普拉提', icon: 'mdi:meditation' },
+  { label: '力量训练', value: '力量训练', icon: 'mdi:weight-lifter' }
 ]
 
 // 强度选项
 const intensityOptions = [
-  { label: '低强度', value: '低强度', icon: 'i-heroicons-sparkles' },
-  { label: '中等强度', value: '中等强度', icon: 'i-heroicons-adjustments' },
-  { label: '高强度', value: '高强度', icon: 'i-heroicons-fire' }
+  { label: '低强度', value: '低强度', icon: 'mdi:leaf' },
+  { label: '中等强度', value: '中等强度', icon: 'mdi:speedometer-medium' },
+  { label: '高强度', value: '高强度', icon: 'mdi:fire' }
 ]
 
 // 运动类型与热量系数的映射
@@ -301,7 +301,24 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             :items="exerciseTypeOptions"
             value-key="value"
             placeholder="选择运动类型"
-          />
+            auto-open
+          >
+            <template #leading="{ modelValue }">
+              <UIcon
+                v-if="modelValue"
+                :name="
+                  exerciseTypeOptions.find((o) => o.value === modelValue)?.icon ||
+                  'mdi:lightning-bolt'
+                "
+              />
+            </template>
+            <template #item="{ item }">
+              <div class="flex items-center gap-2">
+                <UIcon :name="item.icon" />
+                <span>{{ item.label }}</span>
+              </div>
+            </template>
+          </UInputMenu>
         </UFormField>
 
         <UFormField label="运动强度" name="intensity">
@@ -337,7 +354,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="flex items-center gap-2 text-sm font-semibold">
-                <UIcon name="i-heroicons-fire" />
+                <UIcon name="mdi:fire" />
                 运动效果预览
               </span>
               <UBadge :color="intensityColor" variant="soft">
@@ -347,7 +364,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div class="flex items-center gap-2">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-scale" />
+                  <UIcon name="mdi:run" />
                   运动
                 </span>
                 <UBadge color="neutral" variant="soft" class="flex-1">
@@ -356,7 +373,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               </div>
               <div class="flex items-center gap-2">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-clock" />
+                  <UIcon name="mdi:clock-outline" />
                   时长
                 </span>
                 <UBadge color="neutral" variant="soft" class="flex-1">
@@ -365,7 +382,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               </div>
               <div class="flex items-center gap-2">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-fire" />
+                  <UIcon name="mdi:fire" />
                   热量
                 </span>
                 <UBadge color="error" variant="soft" class="flex-1">
@@ -374,7 +391,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               </div>
               <div class="flex items-center gap-2">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-hand-finger" />
+                  <UIcon name="mdi:speedometer" />
                   强度
                 </span>
                 <UBadge :color="intensityColor as any" variant="soft" class="flex-1">
@@ -395,7 +412,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
-          icon="i-heroicons-information-circle"
+          icon="mdi:information"
           color="primary"
           variant="soft"
           :title="healthTip"
@@ -405,7 +422,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <UButton color="neutral" variant="outline" @click="close"> 取消 </UButton>
           <UButton type="submit" color="warning" :loading="submitting">
             <template #leading>
-              <UIcon name="i-heroicons-check" />
+              <UIcon name="mdi:check" />
             </template>
             {{
               submitting

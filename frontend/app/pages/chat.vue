@@ -298,7 +298,7 @@ onUnmounted(() => {
           v-if="messages.length === 0"
           class="flex h-full flex-col items-center justify-center text-center"
         >
-          <UIcon name="i-heroicons-chat-bubble-left-right" class="mb-4 text-6xl" />
+          <UIcon name="heroicons:chat-bubble-left-right" class="mb-4 text-6xl" />
           <h3 class="text-lg font-semibold">开始与 AI 助手对话</h3>
           <p class="mt-2 text-sm">你可以询问关于健康管理、饮食建议、运动计划等问题</p>
         </div>
@@ -313,7 +313,7 @@ onUnmounted(() => {
             <!-- 图标 -->
             <div :class="['flex h-10 w-10 shrink-0 items-center justify-center rounded-full']">
               <UIcon
-                :name="message.role === 'user' ? 'i-heroicons-user' : 'i-heroicons-sparkles'"
+                :name="message.role === 'user' ? 'heroicons:user' : 'heroicons:sparkles'"
                 class="text-lg"
               />
             </div>
@@ -398,7 +398,7 @@ onUnmounted(() => {
               <UButton
                 color="primary"
                 variant="soft"
-                icon="i-heroicons-plus"
+                icon="heroicons:plus"
                 size="xs"
                 :disabled="isLoading"
                 @click="startNewChat"

@@ -97,12 +97,12 @@ const getMealTypeColor = (type: string): 'success' | 'primary' | 'warning' | 'ne
 
 const getMealTypeIcon = (type: string) => {
   const iconMap: Record<string, string> = {
-    早餐: 'i-heroicons-sun',
-    午餐: 'i-heroicons-clock',
-    晚餐: 'i-heroicons-moon',
-    加餐: 'i-heroicons-cake'
+    早餐: 'mdi:weather-sunny',
+    午餐: 'mdi:silverware-fork-knife',
+    晚餐: 'mdi:weather-night',
+    加餐: 'mdi:food-apple'
   }
-  return iconMap[type] || 'i-heroicons-cake'
+  return iconMap[type] || 'mdi:food-apple'
 }
 
 // 热量等级计算
@@ -396,7 +396,7 @@ onMounted(() => {
     <!-- 页面标题 -->
     <UPageHeader title="饮食管理" description="记录和管理您的日常饮食">
       <template #icon>
-        <UIcon name="i-heroicons-cake" />
+        <UIcon name="mdi:food-apple" />
       </template>
     </UPageHeader>
 
@@ -407,7 +407,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-fire" class="text-3xl" />
+              <UIcon name="mdi:fire" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ todayCalories }}</div>
@@ -424,7 +424,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-cake" class="text-3xl" />
+              <UIcon name="mdi:silverware-fork-knife" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ todayMealsTotal }}</div>
@@ -440,7 +440,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-sparkles" class="text-3xl" />
+              <UIcon name="mdi:food-variant" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ todaySnack }}</div>
@@ -455,7 +455,7 @@ onMounted(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-lg font-semibold">
-              <UIcon name="i-heroicons-funnel" />
+              <UIcon name="heroicons:funnel" />
               数据筛选
             </h3>
           </div>
@@ -464,8 +464,11 @@ onMounted(() => {
         <div class="flex flex-wrap gap-4">
           <!-- 开始日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-2 block text-sm font-medium">开始日期</label>
+            <label for="diet-filter-start-date" class="mb-2 block text-sm font-medium"
+              >开始日期</label
+            >
             <DatePicker
+              id="diet-filter-start-date"
               v-model="startDateCalendar"
               block
               :placeholder="formatDate(startDateCalendar, '选择开始日期')"
@@ -475,8 +478,11 @@ onMounted(() => {
 
           <!-- 结束日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-2 block text-sm font-medium">结束日期</label>
+            <label for="diet-filter-end-date" class="mb-2 block text-sm font-medium"
+              >结束日期</label
+            >
             <DatePicker
+              id="diet-filter-end-date"
               v-model="endDateCalendar"
               block
               :placeholder="formatDate(endDateCalendar, '选择结束日期')"
@@ -486,8 +492,11 @@ onMounted(() => {
 
           <!-- 用餐类型 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-2 block text-sm font-medium">用餐类型</label>
+            <label for="diet-filter-meal-type" class="mb-2 block text-sm font-medium"
+              >用餐类型</label
+            >
             <USelect
+              id="diet-filter-meal-type"
               v-model="filterMealType"
               value-key="value"
               :items="mealTypeOptions"
@@ -501,7 +510,7 @@ onMounted(() => {
           <div class="flex items-end">
             <UButton color="neutral" variant="outline" @click="resetFilter">
               <template #leading>
-                <UIcon name="i-heroicons-arrow-path" />
+                <UIcon name="heroicons:arrow-path" />
               </template>
               重置筛选
             </UButton>
@@ -514,12 +523,12 @@ onMounted(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-lg font-semibold">
-              <UIcon name="i-heroicons-list-bullet" />
+              <UIcon name="heroicons:list-bullet" />
               饮食记录
             </h3>
             <UButton color="primary" @click="openAddDialog">
               <template #leading>
-                <UIcon name="i-heroicons-plus" />
+                <UIcon name="heroicons:plus" />
               </template>
               添加记录
             </UButton>

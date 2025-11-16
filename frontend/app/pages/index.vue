@@ -31,37 +31,37 @@ onMounted(() => {
         <h2 class="mb-16 text-center text-3xl font-bold">核心功能</h2>
         <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-3">
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-chart-bar" class="mb-4 text-4xl" />
+            <UIcon name="mdi:chart-line" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">数据可视化</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">直观的图表展示您的健康数据趋势</p>
           </div>
 
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-cake" class="mb-4 text-4xl" />
+            <UIcon name="mdi:food-apple" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">饮食管理</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">记录每日饮食，追踪卡路里摄入</p>
           </div>
 
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-bolt" class="mb-4 text-4xl" />
+            <UIcon name="mdi:run-fast" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">运动跟踪</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">记录运动数据，计算卡路里消耗</p>
           </div>
 
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-scale" class="mb-4 text-4xl" />
+            <UIcon name="mdi:scale-bathroom" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">体重监测</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">记录体重变化，科学管理体重</p>
           </div>
 
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-sparkles" class="mb-4 text-4xl" />
+            <UIcon name="heroicons:sparkles" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">AI 健康助手</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">智能分析，提供个性化健康建议</p>
           </div>
 
           <div class="flex flex-col items-center text-center">
-            <UIcon name="i-heroicons-heart" class="mb-4 text-4xl" />
+            <UIcon name="mdi:heart-pulse" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">健康目标</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">设定目标，系统帮您追踪进度</p>
           </div>

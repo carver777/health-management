@@ -202,7 +202,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         <UFormField label="食物名称" name="foodName">
           <UInput v-model="state.foodName" placeholder="请输入食物名称">
             <template #leading>
-              <UIcon name="i-heroicons-cake" />
+              <UIcon name="mdi:food-apple" />
             </template>
           </UInput>
         </UFormField>
@@ -225,7 +225,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="flex items-center gap-2 text-sm font-semibold">
-                <UIcon name="i-heroicons-chart-bar" />
+                <UIcon name="mdi:chart-bar" />
                 营养摄入预览
               </span>
               <UBadge :color="calorieLevel.color as any" variant="soft">
@@ -235,21 +235,21 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             <div class="space-y-2 text-sm">
               <div class="flex items-center justify-between">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-plate" />
+                  <UIcon name="mdi:silverware-fork-knife" />
                   食物
                 </span>
                 <UBadge color="neutral" variant="soft">{{ state.foodName }}</UBadge>
               </div>
               <div class="flex items-center justify-between">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-fire" />
+                  <UIcon name="mdi:fire" />
                   热量
                 </span>
                 <UBadge color="error" variant="soft">{{ state.estimatedCalories }} kcal</UBadge>
               </div>
               <div class="flex items-center justify-between">
                 <span class="flex items-center gap-2">
-                  <UIcon name="i-heroicons-clock" />
+                  <UIcon name="mdi:clock-outline" />
                   餐次
                 </span>
                 <UBadge color="success" variant="soft">{{ state.mealType }}</UBadge>
@@ -261,7 +261,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
-          icon="i-heroicons-information-circle"
+          icon="heroicons:information-circle"
           color="primary"
           variant="soft"
           :title="healthTip"
@@ -271,7 +271,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <UButton color="neutral" variant="outline" @click="close"> 取消 </UButton>
           <UButton type="submit" color="success" :loading="submitting">
             <template #leading>
-              <UIcon name="i-heroicons-check" />
+              <UIcon name="heroicons:check" />
             </template>
             {{
               submitting

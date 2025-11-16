@@ -37,13 +37,13 @@ const handleClose = () => {
         <!-- 标题栏 -->
         <div class="flex items-center justify-between border-b border-default px-4 py-3">
           <div class="flex items-center gap-2">
-            <UIcon name="i-heroicons-sparkles" class="text-lg" />
+            <UIcon name="heroicons:sparkles" class="text-lg" />
             <h3 class="font-semibold">AI 助手</h3>
           </div>
           <UButton
             color="neutral"
             variant="ghost"
-            icon="i-heroicons-x-mark"
+            icon="heroicons:x-mark"
             size="xs"
             @click="handleClose"
           />
@@ -52,7 +52,7 @@ const handleClose = () => {
         <!-- 内容区域 -->
         <div class="flex flex-1 flex-col justify-center px-6 py-8">
           <div class="text-center">
-            <UIcon name="i-heroicons-chat-bubble-left-right" class="mx-auto mb-4 text-6xl" />
+            <UIcon name="heroicons:chat-bubble-left-right" class="mx-auto mb-4 text-6xl" />
             <h4 class="mb-2 text-lg font-semibold">向 AI 助手提问</h4>
             <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
               输入您的问题，AI 助手将为您提供健康管理建议
@@ -63,7 +63,7 @@ const handleClose = () => {
               <UInput
                 v-model="searchTerm"
                 placeholder="请输入您的问题..."
-                icon="i-heroicons-magnifying-glass"
+                icon="heroicons:magnifying-glass"
                 size="lg"
                 autofocus
                 @keydown.enter="handleAskAI"
@@ -74,7 +74,7 @@ const handleClose = () => {
             <div class="mt-6 flex justify-center gap-2">
               <UButton color="primary" size="lg" @click="handleAskAI">
                 <template #leading>
-                  <UIcon name="i-heroicons-paper-airplane" />
+                  <UIcon name="heroicons:paper-airplane" />
                 </template>
                 {{ searchTerm.trim() ? '发送问题' : '打开 AI 助手' }}
               </UButton>

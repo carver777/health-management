@@ -187,7 +187,7 @@ watch(
     <template #header>
       <div class="space-y-3">
         <div class="flex items-center gap-2 text-lg font-semibold">
-          <UIcon name="i-heroicons-scale" />
+          <UIcon name="mdi:scale-bathroom" />
           <h3>体重趋势</h3>
         </div>
         <div class="flex flex-wrap gap-3 text-sm">

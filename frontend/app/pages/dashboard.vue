@@ -321,7 +321,7 @@ const handleDialogSuccess = () => {
   <UPage>
     <UPageHeader title="数据概览" description="全面了解您的健康状况，追踪每日进展">
       <template #icon>
-        <UIcon name="i-heroicons-chart-bar" />
+        <UIcon name="mdi:view-dashboard" />
       </template>
     </UPageHeader>
 
@@ -331,7 +331,7 @@ const handleDialogSuccess = () => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
-              <UIcon name="i-heroicons-chart-pie" class="text-2xl" />
+              <UIcon name="mdi:scale-bathroom" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-2xl font-bold">
@@ -349,7 +349,7 @@ const handleDialogSuccess = () => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
-              <UIcon name="i-heroicons-cake" class="text-2xl" />
+              <UIcon name="mdi:food-apple" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-2xl font-bold">
@@ -367,7 +367,7 @@ const handleDialogSuccess = () => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg">
-              <UIcon name="i-heroicons-bolt" class="text-2xl" />
+              <UIcon name="mdi:fire" class="text-2xl" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="text-2xl font-bold">

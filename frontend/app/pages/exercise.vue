@@ -40,14 +40,21 @@ const endDateCalendar = shallowRef<DateValue | null>(null)
 
 // 运动类型选项
 const exerciseTypeOptions = [
-  { label: '跑步', value: '跑步', icon: 'i-heroicons-bolt' },
-  { label: '游泳', value: '游泳', icon: 'i-heroicons-bolt' },
-  { label: '骑行', value: '骑行', icon: 'i-heroicons-bolt' },
-  { label: '篮球', value: '篮球', icon: 'i-heroicons-trophy' },
-  { label: '足球', value: '足球', icon: 'i-heroicons-trophy' },
-  { label: '健身', value: '健身', icon: 'i-heroicons-fire' },
-  { label: '瑜伽', value: '瑜伽', icon: 'i-heroicons-heart' },
-  { label: '其他', value: '其他', icon: 'i-heroicons-ellipsis-horizontal-circle' }
+  { label: '跑步', value: '跑步', icon: 'mdi:run' },
+  { label: '游泳', value: '游泳', icon: 'mdi:swim' },
+  { label: '骑行', value: '骑行', icon: 'mdi:bike' },
+  { label: '徒步', value: '徒步', icon: 'mdi:walk' },
+  { label: '爬山', value: '爬山', icon: 'mdi:image-filter-hdr' },
+  { label: '跳绳', value: '跳绳', icon: 'mdi:jump-rope' },
+  { label: '篮球', value: '篮球', icon: 'mdi:basketball' },
+  { label: '足球', value: '足球', icon: 'mdi:soccer' },
+  { label: '羽毛球', value: '羽毛球', icon: 'mdi:badminton' },
+  { label: '乒乓球', value: '乒乓球', icon: 'mdi:table-tennis' },
+  { label: '网球', value: '网球', icon: 'mdi:tennis' },
+  { label: '健身房训练', value: '健身房训练', icon: 'mdi:dumbbell' },
+  { label: '瑜伽', value: '瑜伽', icon: 'mdi:yoga' },
+  { label: '普拉提', value: '普拉提', icon: 'mdi:meditation' },
+  { label: '力量训练', value: '力量训练', icon: 'mdi:weight-lifter' }
 ]
 
 // 今日统计计算属性
@@ -81,7 +88,7 @@ const loadHealthGoals = () => {
 // 获取运动类型的图标
 const getExerciseTypeIcon = (type: string) => {
   const option = exerciseTypeOptions.find((o) => o.value === type)
-  return option?.icon || 'i-heroicons-bolt'
+  return option?.icon || 'mdi:lightning-bolt'
 }
 
 // 运动强度等级
@@ -369,7 +376,7 @@ onMounted(() => {
   <UPage>
     <UPageHeader title="运动管理" description="记录和管理您的运动数据">
       <template #icon>
-        <UIcon name="i-heroicons-bolt" />
+        <UIcon name="mdi:run-fast" />
       </template>
     </UPageHeader>
 
@@ -379,20 +386,16 @@ onMounted(() => {
         <!-- 今日消耗卡路里 -->
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-orange-500 p-3 text-white">
-              <UIcon name="i-heroicons-fire" class="text-2xl" />
+            <div class="p-3">
+              <UIcon name="mdi:fire" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {{ todayCalories }}
-              </div>
-              <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                今日消耗卡路里（kcal）
-              </div>
-              <div v-if="healthGoals.dailyCaloriesBurn" class="text-xs text-gray-400">
+              <div class="text-3xl font-bold">{{ todayCalories }}</div>
+              <div class="text-sm">今日消耗卡路里（kcal）</div>
+              <div v-if="healthGoals.dailyCaloriesBurn" class="text-xs">
                 目标: {{ healthGoals.dailyCaloriesBurn }} kcal
               </div>
-              <div v-else class="text-xs text-gray-400">目标: 未设置</div>
+              <div v-else class="text-xs">目标: 未设置</div>
             </div>
           </div>
         </UCard>
@@ -400,14 +403,12 @@ onMounted(() => {
         <!-- 今日运动时长 -->
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-blue-500 p-3 text-white">
-              <UIcon name="i-heroicons-clock" class="text-2xl" />
+            <div class="p-3">
+              <UIcon name="mdi:clock-outline" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">
-                {{ todayDuration }}
-              </div>
-              <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">今日运动时长（分钟）</div>
+              <div class="text-3xl font-bold">{{ todayDuration }}</div>
+              <div class="text-sm">今日运动时长（分钟）</div>
             </div>
           </div>
         </UCard>
@@ -415,12 +416,12 @@ onMounted(() => {
         <!-- 今日运动次数 -->
         <UCard>
           <div class="flex items-center gap-4">
-            <div class="rounded-lg bg-green-500 p-3 text-white">
-              <UIcon name="i-heroicons-trophy" class="text-2xl" />
+            <div class="p-3">
+              <UIcon name="mdi:trophy" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ todayCount }}</div>
-              <div class="mt-1 text-sm text-gray-600 dark:text-gray-400">今日运动次数</div>
+              <div class="text-3xl font-bold">{{ todayCount }}</div>
+              <div class="text-sm">今日运动次数</div>
             </div>
           </div>
         </UCard>
@@ -431,7 +432,7 @@ onMounted(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-lg font-semibold">
-              <UIcon name="i-heroicons-funnel" />
+              <UIcon name="heroicons:funnel" />
               数据筛选
             </h3>
           </div>
@@ -440,10 +441,11 @@ onMounted(() => {
         <div class="flex flex-wrap gap-4">
           <!-- 开始日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              开始日期
-            </label>
+            <label for="exercise-filter-start-date" class="mb-2 block text-sm font-medium"
+              >开始日期</label
+            >
             <DatePicker
+              id="exercise-filter-start-date"
               v-model="startDateCalendar"
               block
               :placeholder="formatDate(startDateCalendar, '选择开始日期')"
@@ -453,10 +455,11 @@ onMounted(() => {
 
           <!-- 结束日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              结束日期
-            </label>
+            <label for="exercise-filter-end-date" class="mb-2 block text-sm font-medium"
+              >结束日期</label
+            >
             <DatePicker
+              id="exercise-filter-end-date"
               v-model="endDateCalendar"
               block
               :placeholder="formatDate(endDateCalendar, '选择结束日期')"
@@ -466,14 +469,17 @@ onMounted(() => {
 
           <!-- 运动类型 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              运动类型
-            </label>
+            <label for="exercise-filter-type" class="mb-2 block text-sm font-medium"
+              >运动类型</label
+            >
             <UInputMenu
+              id="exercise-filter-type"
               v-model="filterExerciseType"
               :items="exerciseTypeOptions"
               value-key="value"
-              placeholder="全部类型"
+              placeholder="全部"
+              block
+              auto-open
               @change="loadData"
             >
               <template #leading="{ modelValue }">
@@ -482,9 +488,14 @@ onMounted(() => {
             </UInputMenu>
           </div>
 
-          <!-- 按钮 -->
-          <div class="flex items-end gap-2">
-            <UButton color="neutral" variant="outline" @click="resetFilter">重置</UButton>
+          <!-- 重置按钮 -->
+          <div class="flex items-end">
+            <UButton color="neutral" variant="outline" @click="resetFilter">
+              <template #leading>
+                <UIcon name="heroicons:arrow-path" />
+              </template>
+              重置筛选
+            </UButton>
           </div>
         </div>
       </UCard>
@@ -493,10 +504,13 @@ onMounted(() => {
       <UCard>
         <template #header>
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">运动记录</h3>
+            <h3 class="flex items-center gap-2 text-lg font-semibold">
+              <UIcon name="heroicons:list-bullet" />
+              运动记录
+            </h3>
             <UButton color="primary" @click="openAddDialog">
               <template #leading>
-                <UIcon name="i-heroicons-plus" />
+                <UIcon name="heroicons:plus" />
               </template>
               添加记录
             </UButton>

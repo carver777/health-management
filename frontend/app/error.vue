@@ -21,10 +21,10 @@
 
       <!-- 操作按钮 -->
       <div class="mb-8 flex flex-wrap justify-center gap-4">
-        <UButton icon="i-heroicons-home" size="lg" color="primary" @click="handleError">
+        <UButton icon="heroicons:home" size="lg" color="primary" @click="handleError">
           返回首页
         </UButton>
-        <UButton icon="i-heroicons-arrow-left" size="lg" variant="outline" @click="goBack">
+        <UButton icon="heroicons:arrow-left" size="lg" variant="outline" @click="goBack">
           返回上页
         </UButton>
       </div>
@@ -63,27 +63,27 @@ const props = defineProps<Props>()
 const quickLinks = [
   {
     to: '/dashboard',
-    icon: 'i-heroicons-chart-bar',
+    icon: 'mdi:view-dashboard',
     label: '数据概览'
   },
   {
     to: '/body-data',
-    icon: 'i-heroicons-clipboard-document-list',
+    icon: 'mdi:clipboard-text',
     label: '身体数据'
   },
   {
     to: '/diet',
-    icon: 'i-heroicons-cake',
+    icon: 'mdi:food-apple',
     label: '饮食管理'
   },
   {
     to: '/exercise',
-    icon: 'i-heroicons-bolt',
+    icon: 'mdi:run-fast',
     label: '运动管理'
   },
   {
     to: '/chat',
-    icon: 'i-heroicons-chat-bubble-left-right',
+    icon: 'heroicons:chat-bubble-left-right',
     label: '健康咨询'
   }
 ]

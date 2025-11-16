@@ -300,7 +300,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
               <span class="flex items-center gap-2 text-sm font-semibold">
-                <UIcon name="i-heroicons-chart-bar" />
+                <UIcon name="mdi:chart-bar" />
                 BMI 指数
               </span>
               <UBadge :color="bmiStatus.color as any" variant="soft" size="lg">
@@ -323,7 +323,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
-          icon="i-heroicons-information-circle"
+          icon="heroicons:information-circle"
           color="primary"
           variant="soft"
           :title="healthTip"
@@ -333,7 +333,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           <UButton color="neutral" variant="outline" @click="close"> 取消 </UButton>
           <UButton type="submit" :loading="submitting">
             <template #leading>
-              <UIcon name="i-heroicons-check" />
+              <UIcon name="heroicons:check" />
             </template>
             {{
               submitting

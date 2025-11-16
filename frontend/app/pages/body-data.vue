@@ -264,7 +264,7 @@ onMounted(() => {
     <!-- 页面标题 -->
     <UPageHeader title="身体数据管理" description="记录和管理您的身体数据">
       <template #icon>
-        <UIcon name="i-heroicons-clipboard-document-list" />
+        <UIcon name="mdi:clipboard-text" />
       </template>
     </UPageHeader>
 
@@ -275,7 +275,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-scale" class="text-3xl" />
+              <UIcon name="mdi:scale-bathroom" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ latestWeight }}</div>
@@ -292,7 +292,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-arrow-trending-up" class="text-3xl" />
+              <UIcon name="mdi:human-male-height" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ latestHeight }}</div>
@@ -305,7 +305,7 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="i-heroicons-chart-bar" class="text-3xl" />
+              <UIcon name="mdi:chart-bar" class="text-3xl" />
             </div>
             <div class="flex-1">
               <div class="text-3xl font-bold">{{ latestBMI }}</div>
@@ -321,7 +321,7 @@ onMounted(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-lg font-semibold">
-              <UIcon name="i-heroicons-funnel" />
+              <UIcon name="heroicons:funnel" />
               数据筛选
             </h3>
           </div>
@@ -330,8 +330,11 @@ onMounted(() => {
         <div class="flex flex-wrap gap-4">
           <!-- 开始日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-2 block text-sm font-medium">开始日期</label>
+            <label for="body-filter-start-date" class="mb-2 block text-sm font-medium"
+              >开始日期</label
+            >
             <DatePicker
+              id="body-filter-start-date"
               v-model="startDateCalendar"
               block
               :placeholder="formatDate(startDateCalendar, '选择开始日期')"
@@ -341,8 +344,11 @@ onMounted(() => {
 
           <!-- 结束日期 -->
           <div class="min-w-[200px] flex-1">
-            <label class="mb-2 block text-sm font-medium">结束日期</label>
+            <label for="body-filter-end-date" class="mb-2 block text-sm font-medium"
+              >结束日期</label
+            >
             <DatePicker
+              id="body-filter-end-date"
               v-model="endDateCalendar"
               block
               :placeholder="formatDate(endDateCalendar, '选择结束日期')"
@@ -354,7 +360,7 @@ onMounted(() => {
           <div class="flex items-end">
             <UButton color="neutral" variant="outline" @click="resetFilter">
               <template #leading>
-                <UIcon name="i-heroicons-arrow-path" />
+                <UIcon name="heroicons:arrow-path" />
               </template>
               重置筛选
             </UButton>
@@ -367,12 +373,12 @@ onMounted(() => {
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="flex items-center gap-2 text-lg font-semibold">
-              <UIcon name="i-heroicons-list-bullet" />
+              <UIcon name="heroicons:list-bullet" />
               数据记录
             </h3>
             <UButton color="primary" @click="openAddDialog">
               <template #leading>
-                <UIcon name="i-heroicons-plus" />
+                <UIcon name="heroicons:plus" />
               </template>
               添加记录
             </UButton>

@@ -14,7 +14,7 @@
     >
       <template #header="{ collapsed }">
         <div class="flex items-center gap-3">
-          <UIcon name="i-heroicons-chart-bar" class="text-2xl text-primary" />
+          <UIcon name="mdi:heart-pulse" class="text-2xl text-primary" />
           <Transition
             enter-active-class="transition-opacity duration-300 delay-150 ease-out"
             leave-active-class="transition-opacity duration-150 ease-in"
@@ -34,9 +34,7 @@
           <UNavigationMenu :collapsed="collapsed" :items="menuItems" orientation="vertical" />
 
           <div class="mt-auto border-t border-gray-200 pt-4 dark:border-gray-800">
-            <UDashboardSidebarCollapse
-              :icon="collapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'"
-            />
+            <UDashboardSidebarCollapse />
           </div>
         </div>
       </template>
@@ -52,14 +50,14 @@
               color="neutral"
               variant="ghost"
               block
-              trailing-icon="i-heroicons-chevron-up"
+              trailing-icon="heroicons:chevron-up"
             >
               <template #leading>
                 <UAvatar
                   :src="userInfo.avatarUrl || undefined"
                   :alt="userInfo.user.nickname"
                   size="xs"
-                  icon="i-heroicons-user"
+                  icon="heroicons:user"
                 />
               </template>
             </UButton>
@@ -77,7 +75,7 @@
     <!-- AI 助手悬浮按钮 (除了 chat 页面) -->
     <UTooltip v-if="route.path !== '/chat'" text="AI 助手" :ui="{ content: 'z-[100]' }">
       <UButton
-        icon="i-heroicons-sparkles"
+        icon="heroicons:sparkles"
         color="primary"
         size="xl"
         class="fixed right-6 bottom-6 z-50 rounded-full shadow-lg"
@@ -108,6 +106,39 @@ const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
   return ''
 })
 
+// 检查头像是否存在
+const checkAvatar = async () => {
+  if (!tokenCookie.value || !import.meta.client) return
+
+  try {
+    // 使用 HEAD 请求检查头像是否存在，避免下载整个文件
+    await $fetch('/api/user/avatar', {
+      method: 'HEAD'
+    })
+
+    // 如果头像存在，设置时间戳，否则清除状态
+    const timestamp = localStorage.getItem('avatarTimestamp') || Date.now().toString()
+    localStorage.setItem('avatarTimestamp', timestamp)
+    sharedAvatarUrl.value = `/api/user/avatar?t=${timestamp}`
+  } catch {
+    localStorage.removeItem('avatarTimestamp')
+    sharedAvatarUrl.value = ''
+  }
+}
+
+// 监听 token 变化，确保头像 URL 被正确设置
+watch(
+  tokenCookie,
+  async (newToken) => {
+    if (newToken) {
+      await checkAvatar()
+    } else {
+      sharedAvatarUrl.value = ''
+    }
+  },
+  { immediate: true }
+)
+
 const userInfo = computed(() => ({
   user: user.value || { nickname: '用户' },
   avatarUrl: sharedAvatarUrl.value
@@ -116,31 +147,31 @@ const userInfo = computed(() => ({
 const menuItems = computed<NavigationMenuItem[]>(() => [
   {
     label: '数据概览',
-    icon: 'i-heroicons-chart-bar',
+    icon: 'mdi:view-dashboard',
     to: '/dashboard',
     active: route.path === '/dashboard'
   },
   {
     label: '身体数据',
-    icon: 'i-heroicons-chart-pie',
+    icon: 'mdi:clipboard-text',
     to: '/body-data',
     active: route.path === '/body-data'
   },
   {
     label: '饮食管理',
-    icon: 'i-heroicons-cake',
+    icon: 'mdi:food-apple',
     to: '/diet',
     active: route.path === '/diet'
   },
   {
     label: '运动管理',
-    icon: 'i-heroicons-fire',
+    icon: 'mdi:run-fast',
     to: '/exercise',
     active: route.path === '/exercise'
   },
   {
     label: '健康咨询',
-    icon: 'i-heroicons-chat-bubble-left-right',
+    icon: 'heroicons:chat-bubble-left-right',
     to: '/chat',
     active: route.path === '/chat'
   }
@@ -161,14 +192,14 @@ const accountMenuItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
       label: '个人资料',
-      icon: 'i-heroicons-user',
+      icon: 'heroicons:user',
       to: '/profile'
     }
   ],
   [
     {
       label: '退出登录',
-      icon: 'i-heroicons-arrow-right-on-rectangle',
+      icon: 'heroicons:arrow-right-on-rectangle',
       color: 'error',
       onSelect: handleLogout
     }

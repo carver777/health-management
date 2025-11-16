@@ -235,7 +235,7 @@ watch(
     <template #header>
       <div class="space-y-3">
         <div class="flex items-center gap-2 text-lg font-semibold">
-          <UIcon name="i-heroicons-chart-bar" />
+          <UIcon name="mdi:chart-bar" />
           <h3>卡路里趋势</h3>
         </div>
         <div class="flex flex-wrap gap-3 text-sm">
