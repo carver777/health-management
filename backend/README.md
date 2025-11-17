@@ -247,6 +247,12 @@ docker-compose down
 - Token 自动续期
 - 白名单路径配置
 
+支持三种 Token 传递方式（由 `LoginCheckInterceptor` 识别）：
+
+- 请求头 `token: <JWT>`
+- 请求头 `Authorization: Bearer <JWT>`
+- Cookie `token=<JWT>`
+
 ### MyBatis 配置
 
 - 驼峰命名自动映射（`map-underscore-to-camel-case`）
@@ -260,6 +266,16 @@ docker-compose down
 - Markdown 格式化
 - 自动重试机制（最多 3 次）
 - 超时配置（连接 60s，读写 120s）
+
+SSE 流式接口调试示例：
+
+```bash
+curl -N \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"你好"}' \
+  http://localhost:8080/chat/stream
+```
 
 ## API 规范
 
@@ -288,11 +304,57 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 核心接口
 
-- **用户认证**：`POST /login`, `POST /register`
-- **用户信息**：`GET /user/userInfo`, `PUT /user/update`, `PATCH /user/updatePwd`
-- **身体数据**：`GET /body`, `POST /body`, `PUT /body`, `DELETE /body`
-- **饮食管理**：`GET /diet`, `POST /diet`, `PUT /diet`, `DELETE /diet`
-- **运动管理**：`GET /exer`, `POST /exer`, `PUT /exer`, `DELETE /exer`
-- **睡眠管理**：`GET /sleep-items`, `POST /sleep-items`, `PUT /sleep-items/{id}`, `DELETE /sleep-items/{id}`
-- **AI 咨询**：`GET /chat` (SSE 流式响应)
-- **文件上传**：`POST /upload`
+- **用户认证**：`POST /auth/register`, `POST /auth/login`
+- **用户信息**：`GET /user/profile`, `PUT /user/profile`, `GET /user/{userID}`, `PUT /user/{userID}`
+- **文件上传**：`POST /user/avatar`，`GET /user/avatar`
+- **身体数据（Body Metrics）**：
+  - `GET /body-metrics`
+  - `GET /body-metrics/{bodyMetricID}`
+  - `POST /body-metrics`
+  - `PUT /body-metrics/{bodyMetricID}`
+  - `DELETE /body-metrics/{bodyMetricID}`
+- **饮食管理（Diet Items）**：
+  - `GET /diet-items`
+  - `GET /diet-items/{dietItemID}`
+  - `POST /diet-items`
+  - `PUT /diet-items/{dietItemID}`
+  - `DELETE /diet-items/{dietItemID}`
+- **运动管理（Exercise Items）**：
+  - `GET /exercise-items`
+  - `GET /exercise-items/{exerciseItemID}`
+  - `POST /exercise-items`
+  - `PUT /exercise-items/{exerciseItemID}`
+  - `DELETE /exercise-items/{exerciseItemID}`
+- **睡眠管理（Sleep Items）**：
+  - `GET /sleep-items`
+  - `GET /sleep-items/{sleepItemID}`
+  - `POST /sleep-items`
+  - `PUT /sleep-items/{sleepItemID}`
+  - `DELETE /sleep-items/{sleepItemID}`
+- **AI 咨询**：`GET /chat?msg=...`（普通文本流）
+- **AI 流式（SSE）**：`POST /chat/stream`（`text/event-stream`）
+
+更多接口详情见项目根目录 `docs/api/overview.md` 及各模块 API 文档。
+
+## 环境变量说明（核心）
+
+- `SPRING_DATASOURCE_URL`：数据库连接串，默认 `jdbc:mysql://localhost:3306/health_management_db`
+- `SPRING_DATASOURCE_USERNAME`：数据库用户名，默认 `root`
+- `SPRING_DATASOURCE_PASSWORD`：数据库密码（必填）
+- `JWT_SIGN_KEY`：JWT 签名密钥（必填）
+- `JWT_EXPIRE_TIME`：JWT 过期时间（毫秒），默认 `43200000`（12 小时）
+- `SPRING_AI_DASHSCOPE_API_KEY`：通义千问 API Key（可选，仅启用 AI 时需要）
+- `SERVER_PORT`：服务端口，默认 `8080`
+- `AVATAR_UPLOAD_DIR`：头像上传目录，容器内默认 `/app/avatars`
+
+## 常见问题（FAQ）
+
+- Docker 拉取 MySQL 失败：如 `mysql:9.0` 不存在，建议将 `docker-compose.yml` 中镜像改为 `mysql:8.4` 或 `mysql:8.0`。
+- 返回未登录：确认前端按文档将 Token 放在 `Authorization: Bearer <JWT>` 或 `token` 头、或 Cookie `token`。
+- 启动报缺少密钥：确保设置了 `JWT_SIGN_KEY`，且与发放 Token 使用的密钥一致。
+- AI 请求超时：检查 `SPRING_AI_DASHSCOPE_API_KEY`，并确认网络可访问 DashScope。
+
+## 安全与依赖建议
+
+- 优先使用 Spring Boot 自带 Jackson 做 JSON 序列化，避免引入 Fastjson 历史安全风险；如需使用，请锁定安全版本并限制使用面。
+- 生产环境尽量避免使用里程碑/快照仓库依赖，优先选择稳定版。
