@@ -9,15 +9,19 @@ export const useAuth = () => {
   // 使用 cookie 存储 token（自动在服务端和客户端同步）
   const token = useCookie<string | null>('token', {
     maxAge: 60 * 60 * 24 * 7, // 7 天
+    path: '/',
     sameSite: 'lax',
-    secure: import.meta.env.PROD
+    secure: import.meta.env.PROD,
+    default: () => null
   })
 
   // 使用 cookie 存储 userID
   const userID = useCookie<string | null>('userID', {
     maxAge: 60 * 60 * 24 * 7,
+    path: '/',
     sameSite: 'lax',
-    secure: import.meta.env.PROD
+    secure: import.meta.env.PROD,
+    default: () => null
   })
 
   // 计算属性

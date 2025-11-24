@@ -213,13 +213,27 @@ const handleResize = () => {
   chart?.resize()
 }
 
+let resizeObserver: ResizeObserver | null = null
+
 onMounted(() => {
   init()
   window.addEventListener('resize', handleResize)
+
+  // 使用 ResizeObserver 监听容器尺寸变化
+  if (chartRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      handleResize()
+    })
+    resizeObserver.observe(chartRef.value)
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (resizeObserver && chartRef.value) {
+    resizeObserver.unobserve(chartRef.value)
+    resizeObserver.disconnect()
+  }
   disposeChart(chart)
 })
 

@@ -1,4 +1,4 @@
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware((to) => {
   // 仅在客户端执行认证检查
   if (import.meta.server) return
 
@@ -18,18 +18,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/login')
   }
 
-  try {
-    const { isLoggedIn, fetchUserProfile } = useAuth()
-
-    // 如果已登录且有用户信息，直接放行
-    if (isLoggedIn.value) {
-      const hasProfile = await fetchUserProfile()
-      if (!hasProfile) {
-        // token 无效，清除并跳转到登录页
-        return navigateTo('/login')
-      }
-    }
-  } catch {
-    return navigateTo('/login')
-  }
+  // token 验证改为由 auth.client.ts 插件在应用初始化时处理
 })

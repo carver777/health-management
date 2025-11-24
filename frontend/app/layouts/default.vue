@@ -31,9 +31,14 @@
 
       <template #default="{ collapsed }">
         <div class="flex flex-1 flex-col overflow-hidden">
-          <UNavigationMenu :collapsed="collapsed" :items="menuItems" orientation="vertical" />
+          <div class="flex-1 overflow-y-auto">
+            <UNavigationMenu :collapsed="collapsed" :items="menuItems" orientation="vertical" />
+          </div>
 
-          <div class="mt-auto border-t border-gray-200 pt-4 dark:border-gray-800">
+          <div
+            class="flex border-t border-gray-200 pt-4 dark:border-gray-800"
+            :class="{ 'flex justify-center': collapsed }"
+          >
             <UDashboardSidebarCollapse />
           </div>
         </div>
@@ -50,7 +55,8 @@
               color="neutral"
               variant="ghost"
               block
-              trailing-icon="heroicons:chevron-up"
+              :trailing-icon="collapsed ? undefined : 'heroicons:chevron-up'"
+              :class="{ 'justify-center': collapsed }"
             >
               <template #leading>
                 <UAvatar
