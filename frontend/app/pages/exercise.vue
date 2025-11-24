@@ -374,7 +374,7 @@ onMounted(() => {
 
 <template>
   <UPage>
-    <UPageHeader title="运动管理" description="记录和管理您的运动数据">
+    <UPageHeader title="运动管理" description="记录和管理您的运动数据" class="pt-2! sm:pt-3!">
       <template #icon>
         <UIcon name="mdi:run-fast" />
       </template>

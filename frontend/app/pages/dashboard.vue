@@ -319,7 +319,11 @@ const handleDialogSuccess = () => {
 
 <template>
   <UPage>
-    <UPageHeader title="数据概览" description="全面了解您的健康状况，追踪每日进展">
+    <UPageHeader
+      title="数据概览"
+      description="全面了解您的健康状况，追踪每日进展"
+      class="pt-2! sm:pt-3!"
+    >
       <template #icon>
         <UIcon name="mdi:view-dashboard" />
       </template>

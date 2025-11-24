@@ -262,7 +262,7 @@ onMounted(() => {
 <template>
   <UPage>
     <!-- 页面标题 -->
-    <UPageHeader title="身体数据管理" description="记录和管理您的身体数据">
+    <UPageHeader title="身体数据管理" description="记录和管理您的身体数据" class="pt-2! sm:pt-3!">
       <template #icon>
         <UIcon name="mdi:clipboard-text" />
       </template>

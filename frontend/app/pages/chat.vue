@@ -25,6 +25,20 @@ const abortController = ref<AbortController | null>(null)
 const CHAT_HISTORY_KEY = 'health_chat_history'
 const toast = useToast()
 
+// 获取 token（用于 API 请求）
+const tokenCookie = useCookie<string | null>('token')
+
+// 使用全局共享的头像 URL 状态
+const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
+  if (import.meta.client) {
+    const timestamp = localStorage.getItem('avatarTimestamp')
+    if (timestamp && tokenCookie.value) {
+      return `/api/user/avatar?t=${timestamp}`
+    }
+  }
+  return ''
+})
+
 // 配置 marked
 marked.setOptions({
   gfm: true,
@@ -288,7 +302,11 @@ onUnmounted(() => {
 
 <template>
   <UPage>
-    <UPageHeader title="健康咨询" description="与 AI 助手交流，获取健康管理建议" />
+    <UPageHeader
+      title="健康咨询"
+      description="与 AI 助手交流，获取健康管理建议"
+      class="pt-2! sm:pt-3!"
+    />
 
     <UPageBody class="flex h-[calc(100vh-80px)] flex-col p-0!">
       <!-- 聊天记录区域 - 固定高度，可滚动 -->
@@ -310,12 +328,24 @@ onUnmounted(() => {
             :key="message.id"
             :class="['flex gap-3', message.role === 'user' ? 'flex-row-reverse' : '']"
           >
-            <!-- 图标 -->
-            <div :class="['flex h-10 w-10 shrink-0 items-center justify-center rounded-full']">
-              <UIcon
-                :name="message.role === 'user' ? 'heroicons:user' : 'heroicons:sparkles'"
-                class="text-lg"
+            <!-- 头像 -->
+            <div :class="['shrink-0']">
+              <UAvatar
+                v-if="message.role === 'user'"
+                :src="sharedAvatarUrl"
+                alt="用户头像"
+                size="md"
+                icon="heroicons:user"
               />
+              <div
+                v-else
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900"
+              >
+                <UIcon
+                  name="heroicons:sparkles"
+                  class="text-lg text-primary-600 dark:text-primary-400"
+                />
+              </div>
             </div>
 
             <!-- 消息内容 -->

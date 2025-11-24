@@ -368,7 +368,7 @@ onMounted(() => {
 
 <template>
   <UPage>
-    <UPageHeader title="睡眠管理" description="记录与分析每日睡眠情况">
+    <UPageHeader title="睡眠管理" description="记录与分析每日睡眠情况" class="pt-2! sm:pt-3!">
       <template #icon>
         <UIcon name="mdi:sleep" />
       </template>

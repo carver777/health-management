@@ -460,7 +460,7 @@ onMounted(() => {
 
 <template>
   <UPage>
-    <UPageHeader title="个人资料" description="管理您的个人信息" />
+    <UPageHeader title="个人资料" description="管理您的个人信息" class="pt-2! sm:pt-3!" />
 
     <UPageBody>
       <!-- Loading 状态 -->

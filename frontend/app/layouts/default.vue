@@ -2,6 +2,7 @@
   <UDashboardGroup>
     <UDashboardSidebar
       v-model:collapsed="isCollapsed"
+      v-model:open="isSidebarOpen"
       collapsible
       resizable
       :default-size="20"
@@ -73,6 +74,17 @@
     </UDashboardSidebar>
 
     <UDashboardPanel>
+      <template #header>
+        <UButton
+          icon="heroicons:bars-3"
+          size="xl"
+          color="neutral"
+          variant="ghost"
+          class="lg:hidden"
+          @click="isSidebarOpen = true"
+        />
+      </template>
+
       <template #body>
         <slot />
       </template>
@@ -100,6 +112,7 @@ const { user, logout } = useAuth()
 const tokenCookie = useCookie('token')
 
 const isCollapsed = ref(false)
+const isSidebarOpen = ref(false)
 
 // 使用全局共享的头像 URL 状态
 const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {

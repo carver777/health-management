@@ -394,7 +394,7 @@ onMounted(() => {
 <template>
   <UPage>
     <!-- 页面标题 -->
-    <UPageHeader title="饮食管理" description="记录和管理您的日常饮食">
+    <UPageHeader title="饮食管理" description="记录和管理您的日常饮食" class="pt-2! sm:pt-3!">
       <template #icon>
         <UIcon name="mdi:food-apple" />
       </template>
