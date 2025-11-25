@@ -51,9 +51,28 @@ public class AiConfig {
 
   @Bean
   public ChatClient chatClient(ChatClient.Builder builder) {
+    // 获取所有 Function Bean
+    String[] functionNames =
+        new String[] {
+          "getCurrentDate",
+          "queryBodyMetrics",
+          "addBodyMetric",
+          "querySleepRecords",
+          "addSleepRecord",
+          "updateSleepRecord",
+          "queryDietRecords",
+          "addDietRecord",
+          "updateDietRecord",
+          "queryExerciseRecords",
+          "addExerciseRecord",
+          "updateExerciseRecord",
+          "webSearch"
+        };
+
     return builder
         .defaultSystem(AiPromptTemplate.SYSTEM_PROMPT)
         .defaultAdvisors(new MessageChatMemoryAdvisor(chatMemory))
+        .defaultFunctions(functionNames)
         .build();
   }
 }

@@ -36,34 +36,37 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    
+
     // MyBatis
     implementation("org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4")
-    
+
     // Database
     runtimeOnly("com.mysql:mysql-connector-j")
-    
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
-    
+
     // PageHelper
     implementation("com.github.pagehelper:pagehelper-spring-boot-starter:1.4.7")
-    
+
     // JWT
     implementation("io.jsonwebtoken:jjwt:0.9.1")
     implementation("javax.xml.bind:jaxb-api:2.3.1")
-    
+
     // JSON
     implementation("com.alibaba:fastjson:1.2.83")
-    
+
     // AI Integration
     implementation("org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M5")
-    
+
+    // HTTP Client for web search
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Markdown Parser
     implementation("org.commonmark:commonmark:0.20.0")
     implementation("org.commonmark:commonmark-ext-gfm-tables:0.20.0")
-    
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.4")

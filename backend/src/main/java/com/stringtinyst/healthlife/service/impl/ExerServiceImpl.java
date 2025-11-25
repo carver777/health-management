@@ -36,11 +36,6 @@ public class ExerServiceImpl implements ExerService {
   }
 
   @Override
-  public int searchExerItemID(Exer exer) {
-    return exerMapper.searchExerItemID(exer);
-  }
-
-  @Override
   public Exer getByExerItemID(int exerciseItemID) {
     return exerMapper.getByExerItemID(exerciseItemID);
   }

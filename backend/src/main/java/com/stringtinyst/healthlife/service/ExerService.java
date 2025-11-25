@@ -15,8 +15,6 @@ public interface ExerService {
 
   void addExer(Exer exer);
 
-  int searchExerItemID(Exer exer);
-
   Exer getByExerItemID(int exerciseItemID);
 
   void updateExer(Exer exer);

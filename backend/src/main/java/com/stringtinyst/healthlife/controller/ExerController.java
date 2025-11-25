@@ -38,8 +38,7 @@ public class ExerController {
   @PostMapping
   public Result addExer(@Valid @RequestBody Exer exer) {
     exerService.addExer(exer);
-    int exerItemID = exerService.searchExerItemID(exer);
-    return Result.success(exerItemID);
+    return Result.success(exer.getExerciseItemID());
   }
 
   @PutMapping("/{exerciseItemID}")
