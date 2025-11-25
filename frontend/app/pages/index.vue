@@ -49,6 +49,12 @@ onMounted(() => {
           </div>
 
           <div class="flex flex-col items-center text-center">
+            <UIcon name="mdi:sleep" class="mb-4 text-4xl" />
+            <h3 class="mb-2 text-lg font-semibold">睡眠管理</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">记录睡眠时长和质量，改善睡眠</p>
+          </div>
+
+          <div class="flex flex-col items-center text-center">
             <UIcon name="mdi:scale-bathroom" class="mb-4 text-4xl" />
             <h3 class="mb-2 text-lg font-semibold">体重监测</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">记录体重变化，科学管理体重</p>

@@ -82,6 +82,11 @@ const quickLinks = [
     label: '运动管理'
   },
   {
+    to: '/sleep',
+    icon: 'mdi:sleep',
+    label: '睡眠管理'
+  },
+  {
     to: '/chat',
     icon: 'heroicons:chat-bubble-left-right',
     label: '健康咨询'
