@@ -16,6 +16,13 @@ const { echarts, initChart, disposeChart } = useECharts()
 const chartRef = ref<HTMLDivElement>()
 let chart: ReturnType<typeof initChart> | null = null
 
+const releaseChart = () => {
+  if (chart) {
+    disposeChart(chart)
+    chart = null
+  }
+}
+
 const timePeriodButtons = [
   { label: '7 天', value: '7d' },
   { label: '30 天', value: '30d' },
@@ -38,7 +45,7 @@ const init = () => {
     return
   }
 
-  disposeChart(chart)
+  releaseChart()
   chart = initChart(chartRef.value)
   updateChart()
 }
@@ -186,7 +193,7 @@ onUnmounted(() => {
     resizeObserver.unobserve(chartRef.value)
     resizeObserver.disconnect()
   }
-  disposeChart(chart)
+  releaseChart()
 })
 
 watch(
