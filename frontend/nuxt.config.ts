@@ -1,6 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-// @ts-expect-error process is available in Node.js environment
 const apiBaseUrl = process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080'
 
 export default defineNuxtConfig({

@@ -229,11 +229,23 @@ function switchToLogin() {
         <UFormField label="性别" name="gender">
           <div class="flex gap-4">
             <label class="flex cursor-pointer items-center gap-2">
-              <input v-model="registerState.gender" type="radio" value="男" class="h-4 w-4" />
+              <input
+                v-model="registerState.gender"
+                type="radio"
+                name="gender"
+                value="男"
+                class="h-4 w-4"
+              />
               <span class="text-sm">男</span>
             </label>
             <label class="flex cursor-pointer items-center gap-2">
-              <input v-model="registerState.gender" type="radio" value="女" class="h-4 w-4" />
+              <input
+                v-model="registerState.gender"
+                type="radio"
+                name="gender"
+                value="女"
+                class="h-4 w-4"
+              />
               <span class="text-sm">女</span>
             </label>
           </div>

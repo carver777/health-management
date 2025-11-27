@@ -63,10 +63,12 @@ git push origin feat/feature-name
 
 ```bash
 cd frontend
-pnpm lint        # 代码检查
-pnpm lint:fix    # 自动修复
+pnpm lint        # 代码检查并修复
+pnpm format      # 代码格式化
 pnpm typecheck   # 类型检查
-pnpm api:test    # 调用 Newman 运行 Postman API 回归
+pnpm test:run    # 单元测试
+pnpm test:e2e    # E2E 测试
+pnpm api:test    # API 回归测试
 ```
 
 ### 后端
@@ -82,6 +84,7 @@ pnpm api:test    # 调用 Newman 运行 Postman API 回归
 - 代码检查通过
 - 类型检查通过
 - 单元测试通过
+- E2E 测试通过
 - 填写完整的 PR 描述
 
 ### PR 模板
@@ -95,11 +98,14 @@ pnpm api:test    # 调用 Newman 运行 Postman API 回归
 - [ ] Bug 修复
 - [ ] 代码重构
 - [ ] 文档更新
+- [ ] 测试覆盖
 
 ## 测试情况
 - [ ] 本地测试通过
 - [ ] 代码检查通过
 - [ ] 类型检查通过
+- [ ] 单元测试通过
+- [ ] E2E 测试通过
 
 ## 相关 Issue
 #issue_number（如有）
