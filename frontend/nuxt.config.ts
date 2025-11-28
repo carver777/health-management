@@ -75,6 +75,13 @@ export default defineNuxtConfig({
     }
   },
 
+  vite: {
+    build: {
+      sourcemap: false,
+      chunkSizeWarningLimit: 1000
+    }
+  },
+
   eslint: {
     config: {
       stylistic: {
