@@ -560,6 +560,66 @@ public class HealthDataFunctions {
           "跑步", "游泳", "骑行", "徒步", "爬山", "跳绳", "篮球", "足球", "羽毛球", "乒乓球", "网球", "健身房训练", "瑜伽", "普拉提",
           "力量训练");
 
+  // 运动类型对应的 MET 值（中等强度）
+  // MET (Metabolic Equivalent of Task) 代谢当量
+  private static final java.util.Map<String, Double> EXERCISE_MET_VALUES =
+      java.util.Map.ofEntries(
+          java.util.Map.entry("跑步", 9.8),
+          java.util.Map.entry("游泳", 8.0),
+          java.util.Map.entry("骑行", 6.8),
+          java.util.Map.entry("徒步", 3.5),
+          java.util.Map.entry("爬山", 7.0),
+          java.util.Map.entry("跳绳", 11.0),
+          java.util.Map.entry("篮球", 6.5),
+          java.util.Map.entry("足球", 7.0),
+          java.util.Map.entry("羽毛球", 5.5),
+          java.util.Map.entry("乒乓球", 4.0),
+          java.util.Map.entry("网球", 7.0),
+          java.util.Map.entry("健身房训练", 5.0),
+          java.util.Map.entry("瑜伽", 3.0),
+          java.util.Map.entry("普拉提", 4.0),
+          java.util.Map.entry("力量训练", 5.0));
+
+  // 默认体重（当用户没有体重数据时使用）
+  private static final double DEFAULT_WEIGHT_KG = 65.0;
+
+  /**
+   * 获取用户最新体重
+   *
+   * @param userID 用户 ID
+   * @return 用户最新体重，如果没有记录则返回 null
+   */
+  private Double getUserLatestWeight(String userID) {
+    try {
+      PageBean pageBean = bodyService.page(1, 1, userID, null, null);
+      if (pageBean.getRows() != null && !pageBean.getRows().isEmpty()) {
+        Object firstRow = pageBean.getRows().get(0);
+        if (firstRow instanceof Body body) {
+          return body.getWeightKG().doubleValue();
+        }
+      }
+    } catch (Exception e) {
+      log.warn("获取用户体重失败: {}", e.getMessage());
+    }
+    return null;
+  }
+
+  /**
+   * 使用 MET 公式计算运动消耗热量
+   *
+   * <p>公式: 热量 (kcal) = MET × 体重 (kg) × 时间 (小时)
+   *
+   * @param exerciseType 运动类型
+   * @param durationMinutes 运动时长（分钟）
+   * @param weightKG 体重（千克）
+   * @return 消耗热量（kcal）
+   */
+  private int calculateCaloriesByMET(String exerciseType, int durationMinutes, double weightKG) {
+    double met = EXERCISE_MET_VALUES.getOrDefault(exerciseType, 5.0);
+    double hours = durationMinutes / 60.0;
+    return (int) Math.round(met * weightKG * hours);
+  }
+
   /** 添加运动数据请求 */
   @Data
   @NoArgsConstructor
@@ -581,13 +641,12 @@ public class HealthDataFunctions {
     @JsonPropertyDescription("运动时长（分钟），范围 1-600")
     private Integer durationMinutes;
 
-    @JsonProperty(required = true)
-    @JsonPropertyDescription("预估消耗卡路里（必须大于 0）")
+    @JsonPropertyDescription("预估消耗卡路里（可选，如不提供将根据 MET 公式自动计算）")
     private Integer estimatedCaloriesBurned;
   }
 
   @Bean
-  @Description("添加用户的运动记录，运动类型必须是系统支持的类型之一")
+  @Description("添加用户的运动记录。如果不提供消耗热量，系统将使用 MET 公式（热量 = MET × 体重 × 时间）自动计算。需要先查询用户身体数据获取体重。")
   public Function<AddExerciseRequest, String> addExerciseRecord() {
     return request -> {
       try {
@@ -598,21 +657,53 @@ public class HealthDataFunctions {
               request.getExerciseType(), String.join("、", VALID_EXERCISE_TYPES));
         }
 
+        // 获取用户体重
+        Double userWeight = getUserLatestWeight(request.getUserID());
+        boolean usingDefaultWeight = (userWeight == null);
+        double weightForCalculation = usingDefaultWeight ? DEFAULT_WEIGHT_KG : userWeight;
+
+        // 计算消耗热量
+        int calories;
+        String calorieSource;
+        if (request.getEstimatedCaloriesBurned() != null
+            && request.getEstimatedCaloriesBurned() > 0) {
+          calories = request.getEstimatedCaloriesBurned();
+          calorieSource = "用户提供";
+        } else {
+          calories =
+              calculateCaloriesByMET(
+                  request.getExerciseType(), request.getDurationMinutes(), weightForCalculation);
+          calorieSource =
+              usingDefaultWeight
+                  ? String.format("MET 公式计算（使用默认体重 %.1f kg）", DEFAULT_WEIGHT_KG)
+                  : String.format("MET 公式计算（基于体重 %.1f kg）", userWeight);
+        }
+
         Exer exer = new Exer();
         exer.setUserID(request.getUserID());
         exer.setRecordDate(LocalDate.parse(request.getRecordDate()));
         exer.setExerciseType(request.getExerciseType());
         exer.setDurationMinutes(request.getDurationMinutes());
-        exer.setEstimatedCaloriesBurned(request.getEstimatedCaloriesBurned());
+        exer.setEstimatedCaloriesBurned(calories);
 
         exerService.addExer(exer);
 
-        return String.format(
-            "成功添加运动记录！记录 ID: %d，运动: %s，时长: %d 分钟，消耗: %d kcal",
-            exer.getExerciseItemID(),
-            request.getExerciseType(),
-            request.getDurationMinutes(),
-            request.getEstimatedCaloriesBurned());
+        StringBuilder result = new StringBuilder();
+        result.append(
+            String.format(
+                "成功添加运动记录！记录 ID: %d，运动: %s，时长: %d 分钟，消耗: %d kcal（%s）",
+                exer.getExerciseItemID(),
+                request.getExerciseType(),
+                request.getDurationMinutes(),
+                calories,
+                calorieSource));
+
+        if (usingDefaultWeight) {
+          result.append("\n\n⚠️ 提示：您还没有记录身体数据，热量计算使用了默认体重 65 kg。");
+          result.append("建议先记录您的身高体重数据，以获得更准确的热量消耗计算。");
+        }
+
+        return result.toString();
       } catch (Exception e) {
         log.error("添加运动记录失败", e);
         return "添加运动记录失败: " + e.getMessage();

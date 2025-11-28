@@ -25,6 +25,38 @@ const isOpen = computed({
 // 日历状态
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 
+// 用户体重（从最新身体数据获取）
+const userWeight = ref<number | null>(null)
+const loadingWeight = ref(false)
+
+// 获取用户最新体重
+const fetchUserWeight = async () => {
+  loadingWeight.value = true
+  try {
+    const token = useCookie('token')
+    if (!token.value) return
+
+    const response = await $fetch<{ code: number; data?: { rows?: BodyData[] } }>(
+      '/api/body-metrics',
+      {
+        headers: { Authorization: `Bearer ${token.value}` },
+        params: { page: 1, pageSize: 1 } // 只获取最新一条
+      }
+    )
+
+    if (response.code === 1 && response.data?.rows?.length) {
+      const firstRow = response.data.rows[0]
+      if (firstRow) {
+        userWeight.value = firstRow.weightKG
+      }
+    }
+  } catch {
+    // 静默失败，使用默认值
+  } finally {
+    loadingWeight.value = false
+  }
+}
+
 // 表单验证 Schema
 const schema = z.object({
   exerciseType: z.string().min(1, '请选择或输入运动类型'),
@@ -54,9 +86,12 @@ const isEditMode = computed(() => !!props.editItem)
 // 对话框标题
 const dialogTitle = computed(() => (isEditMode.value ? '编辑运动记录' : '快速记录运动'))
 
-// 监听对话框打开，重置或填充表单
-watch(isOpen, (val) => {
+// 监听对话框打开，重置或填充表单，并获取用户体重
+watch(isOpen, async (val) => {
   if (val) {
+    // 获取用户最新体重
+    await fetchUserWeight()
+
     if (props.editItem) {
       // 编辑模式：填充现有数据
       state.exerciseType = props.editItem.exerciseType
@@ -75,65 +110,88 @@ watch(isOpen, (val) => {
   }
 })
 
-// 运动类型选项
+// 运动类型选项（包含 MET 值）
 const exerciseTypeOptions = [
-  { label: '跑步', value: '跑步', icon: 'mdi:run' },
-  { label: '游泳', value: '游泳', icon: 'mdi:swim' },
-  { label: '骑行', value: '骑行', icon: 'mdi:bike' },
-  { label: '徒步', value: '徒步', icon: 'mdi:walk' },
-  { label: '爬山', value: '爬山', icon: 'mdi:image-filter-hdr' },
-  { label: '跳绳', value: '跳绳', icon: 'mdi:jump-rope' },
-  { label: '篮球', value: '篮球', icon: 'mdi:basketball' },
-  { label: '足球', value: '足球', icon: 'mdi:soccer' },
-  { label: '羽毛球', value: '羽毛球', icon: 'mdi:badminton' },
-  { label: '乒乓球', value: '乒乓球', icon: 'mdi:table-tennis' },
-  { label: '网球', value: '网球', icon: 'mdi:tennis' },
-  { label: '健身房训练', value: '健身房训练', icon: 'mdi:dumbbell' },
-  { label: '瑜伽', value: '瑜伽', icon: 'mdi:yoga' },
-  { label: '普拉提', value: '普拉提', icon: 'mdi:meditation' },
-  { label: '力量训练', value: '力量训练', icon: 'mdi:weight-lifter' }
+  { label: '跑步', value: '跑步', icon: 'mdi:run', met: { low: 6, medium: 9.8, high: 11.5 } },
+  { label: '游泳', value: '游泳', icon: 'mdi:swim', met: { low: 5.8, medium: 8, high: 10 } },
+  { label: '骑行', value: '骑行', icon: 'mdi:bike', met: { low: 4, medium: 6.8, high: 10 } },
+  { label: '徒步', value: '徒步', icon: 'mdi:walk', met: { low: 2.5, medium: 3.5, high: 5 } },
+  {
+    label: '爬山',
+    value: '爬山',
+    icon: 'mdi:image-filter-hdr',
+    met: { low: 5, medium: 7, high: 9 }
+  },
+  { label: '跳绳', value: '跳绳', icon: 'mdi:jump-rope', met: { low: 8, medium: 11, high: 12.3 } },
+  { label: '篮球', value: '篮球', icon: 'mdi:basketball', met: { low: 4.5, medium: 6.5, high: 8 } },
+  { label: '足球', value: '足球', icon: 'mdi:soccer', met: { low: 5, medium: 7, high: 10 } },
+  {
+    label: '羽毛球',
+    value: '羽毛球',
+    icon: 'mdi:badminton',
+    met: { low: 4.5, medium: 5.5, high: 7 }
+  },
+  {
+    label: '乒乓球',
+    value: '乒乓球',
+    icon: 'mdi:table-tennis',
+    met: { low: 3, medium: 4, high: 5 }
+  },
+  { label: '网球', value: '网球', icon: 'mdi:tennis', met: { low: 5, medium: 7, high: 8 } },
+  {
+    label: '健身房训练',
+    value: '健身房训练',
+    icon: 'mdi:dumbbell',
+    met: { low: 3.5, medium: 5, high: 6 }
+  },
+  { label: '瑜伽', value: '瑜伽', icon: 'mdi:yoga', met: { low: 2, medium: 3, high: 4 } },
+  { label: '普拉提', value: '普拉提', icon: 'mdi:meditation', met: { low: 3, medium: 4, high: 5 } },
+  {
+    label: '力量训练',
+    value: '力量训练',
+    icon: 'mdi:weight-lifter',
+    met: { low: 3.5, medium: 5, high: 6 }
+  }
 ]
 
 // 强度选项
 const intensityOptions = [
-  { label: '低强度', value: '低强度', icon: 'mdi:leaf' },
-  { label: '中等强度', value: '中等强度', icon: 'mdi:speedometer-medium' },
-  { label: '高强度', value: '高强度', icon: 'mdi:fire' }
+  { label: '低强度', value: '低强度', icon: 'mdi:leaf', key: 'low' as const },
+  { label: '中等强度', value: '中等强度', icon: 'mdi:speedometer-medium', key: 'medium' as const },
+  { label: '高强度', value: '高强度', icon: 'mdi:fire', key: 'high' as const }
 ]
 
-// 运动类型与热量系数的映射
-const exerciseCalorieMap: Record<string, number> = {
-  跑步: 12,
-  游泳: 14,
-  骑行: 8,
-  篮球: 10,
-  足球: 11,
-  羽毛球: 9,
-  乒乓球: 7,
-  网球: 9,
-  健身房训练: 10,
-  瑜伽: 4,
-  普拉提: 5,
-  爬山: 13,
-  徒步: 6,
-  跳绳: 15,
-  力量训练: 8
+// 获取强度对应的 key
+const getIntensityKey = (intensity: string): 'low' | 'medium' | 'high' => {
+  const option = intensityOptions.find((o) => o.value === intensity)
+  return option?.key || 'medium'
 }
 
-// 强度系数
-const intensityMultiplier: Record<string, number> = {
-  低强度: 0.8,
-  中等强度: 1.0,
-  高强度: 1.3
-}
-
-// 智能计算热量消耗
+/**
+ * 科学计算热量消耗
+ * 公式: 热量 (kcal) = MET × 体重 (kg) × 时间 (小时)
+ * MET (Metabolic Equivalent of Task) 代谢当量
+ */
 const calculateCalories = () => {
-  if (state.durationMinutes && state.exerciseType && state.intensity) {
-    const baseCalorie = exerciseCalorieMap[state.exerciseType] || 8
-    const multiplier = intensityMultiplier[state.intensity] || 1.0
-    state.estimatedCaloriesBurned = Math.round(baseCalorie * state.durationMinutes * multiplier)
+  if (!state.durationMinutes || !state.exerciseType || !state.intensity) {
+    return
   }
+
+  // 获取运动类型的 MET 值
+  const exercise = exerciseTypeOptions.find((o) => o.value === state.exerciseType)
+  if (!exercise) {
+    return
+  }
+
+  const intensityKey = getIntensityKey(state.intensity)
+  const met = exercise.met[intensityKey]
+
+  // 使用用户体重，如果没有则使用默认值 65kg
+  const weight = userWeight.value || 65
+  const hours = state.durationMinutes / 60
+
+  // 公式: MET × 体重 (kg) × 时间 (小时)
+  state.estimatedCaloriesBurned = Math.round(met * weight * hours)
 }
 
 // 监听运动类型、时长、强度变化，自动计算热量
@@ -350,6 +408,17 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               <span class="text-xs">kcal</span>
             </template>
           </UInput>
+          <template #hint>
+            <span v-if="loadingWeight" class="text-xs opacity-60">
+              <UIcon name="mdi:loading" class="animate-spin" /> 加载体重数据...
+            </span>
+            <span v-else-if="userWeight" class="text-xs opacity-60">
+              基于体重 {{ userWeight }} kg 计算（MET × 体重 × 时间）
+            </span>
+            <span v-else class="text-xs text-warning-500">
+              未找到体重数据，使用默认值 65 kg 计算
+            </span>
+          </template>
         </UFormField>
 
         <!-- 运动效果预览 -->
