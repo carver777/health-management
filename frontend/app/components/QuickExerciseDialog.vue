@@ -31,16 +31,20 @@ const loadingWeight = ref(false)
 
 // 获取用户最新体重
 const fetchUserWeight = async () => {
+  const token = useCookie('token')
+  const userID = useCookie('userID')
+
+  if (!token.value || !userID.value) {
+    return
+  }
+
   loadingWeight.value = true
   try {
-    const token = useCookie('token')
-    if (!token.value) return
-
     const response = await $fetch<{ code: number; data?: { rows?: BodyData[] } }>(
       '/api/body-metrics',
       {
         headers: { Authorization: `Bearer ${token.value}` },
-        params: { page: 1, pageSize: 1 } // 只获取最新一条
+        params: { page: 1, pageSize: 1, userID: userID.value }
       }
     )
 
