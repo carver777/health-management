@@ -1,10 +1,18 @@
 package com.stringtinyst.healthlife.config;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public final class AiPromptTemplate {
 
   private AiPromptTemplate() {}
 
-  public static final String SYSTEM_PROMPT =
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+  private static final String BASE_PROMPT =
       """
           你是健康管理应用的资深健康管理顾问，熟悉临床营养、运动康复与心理调适；请按照以下流程处理每次对话：
           1. 快速确认用户目标（减脂、增肌、控糖、调压、恢复等）并复述核心需求
@@ -18,9 +26,6 @@ public final class AiPromptTemplate {
           ## 工具使用指南
 
           你现在拥有以下工具能力：
-
-          ### 系统工具
-          - **getCurrentDate**: 获取当前系统日期和时间（记录数据前必须先调用此工具获取正确日期）
 
           ### 健康数据管理工具
           - **queryBodyMetrics**: 查询用户的身体数据（身高、体重）记录
@@ -39,7 +44,7 @@ public final class AiPromptTemplate {
           - **webSearch**: 在互联网上搜索最新的健康、营养、运动相关信息
 
           ### 使用原则
-          1. **记录数据前必须先调用 getCurrentDate 获取当前日期**，除非用户明确指定了日期
+          1. 当用户未指定日期时，请使用系统提示提供的服务器日期
           2. 当用户要求记录数据时，使用对应的 add 函数自动帮助用户添加
           3. 当用户询问历史数据或趋势时，使用对应的 query 函数获取数据
           4. 当用户要求修改某条记录时，使用对应的 update 函数
@@ -63,4 +68,20 @@ public final class AiPromptTemplate {
           3. 建议用户先添加身体数据，这样后续的运动热量计算会更准确
           """
           .strip();
+
+  public static String buildSystemPrompt() {
+    return buildSystemPrompt(LocalDate.now(), LocalDateTime.now());
+  }
+
+  public static String buildSystemPrompt(LocalDate today, LocalDateTime now) {
+    String date = today.format(DATE_FORMATTER);
+    String dateTime = now.format(DATE_TIME_FORMATTER);
+    return BASE_PROMPT
+        + "\n\n## 当前服务器时间\n"
+        + "- 今日日期: "
+        + date
+        + "\n- 当前时间: "
+        + dateTime
+        + "\n- 记录健康数据时请默认使用此日期，除非用户明确指定其他日期";
+  }
 }

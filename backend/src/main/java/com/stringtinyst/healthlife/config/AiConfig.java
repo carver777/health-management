@@ -54,7 +54,6 @@ public class AiConfig {
     // 获取所有 Function Bean
     String[] functionNames =
         new String[] {
-          "getCurrentDate",
           "queryBodyMetrics",
           "addBodyMetric",
           "querySleepRecords",
@@ -70,7 +69,7 @@ public class AiConfig {
         };
 
     return builder
-        .defaultSystem(AiPromptTemplate.SYSTEM_PROMPT)
+        .defaultSystem(AiPromptTemplate.buildSystemPrompt())
         .defaultAdvisors(new MessageChatMemoryAdvisor(chatMemory))
         .defaultFunctions(functionNames)
         .build();

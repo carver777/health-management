@@ -33,11 +33,10 @@
 
 ## AI 工具清单
 
-聊天接口内部已经注册以下 Spring AI Function，模型会根据上下文自动调用：
+聊天接口会在系统提示中附带当前服务器日期与时间，因此无需额外函数即可获取今日日期。以下 Spring AI Function 会根据上下文自动调用：
 
 | 功能域 | 函数 | 说明 |
 | --- | --- | --- |
-| 系统工具 | `getCurrentDate` | 获取服务端当前日期时间，提示模型记录最新日期 |
 | 身体数据 | `queryBodyMetrics` / `addBodyMetric` | 查询或新增身高体重记录 |
 | 睡眠数据 | `querySleepRecords` / `addSleepRecord` / `updateSleepRecord` | 查询、添加或修改睡眠记录，自动校验时间顺序 |
 | 饮食数据 | `queryDietRecords` / `addDietRecord` / `updateDietRecord` | 管理饮食记录与卡路里估算 |

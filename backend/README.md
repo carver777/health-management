@@ -25,6 +25,8 @@
 - **Spring WebFlux** - SSE 流式响应支持
 - **OkHttp 4.12.0** - 联网搜索 HTTP 客户端
 - **Spring AI Function Calling** - `HealthDataFunctions`、`WebSearchFunction` 用于模型自动操作数据库和联网搜索
+- **动态系统提示** - `AiPromptTemplate` 每次请求实时注入服务器日期与时间，指导模型统一使用服务端日期
+- **FunctionResultCache** - 轻量缓存函数结果，避免模型在同一轮对话中重复触发查询
 
 ### 开发工具
 
@@ -48,6 +50,7 @@ backend/
 │   │   │   │   ├── ChatController.java
 │   │   │   │   ├── DietController.java
 │   │   │   │   ├── ExerController.java
+│   │   │   │   ├── GlobalExceptionHandler.java
 │   │   │   │   ├── SleepController.java
 │   │   │   │   ├── UploadController.java
 │   │   │   │   ├── UserController.java
@@ -56,7 +59,14 @@ backend/
 │   │   │   │   ├── BodyService.java
 │   │   │   │   ├── DietService.java
 │   │   │   │   ├── ExerService.java
-│   │   │   │   └── SleepService.java
+│   │   │   │   ├── SleepService.java
+│   │   │   │   ├── UserService.java
+│   │   │   │   └── impl/
+│   │   │   │       ├── BodyServiceImpl.java
+│   │   │   │       ├── DietServiceImpl.java
+│   │   │   │       ├── ExerServiceImpl.java
+│   │   │   │       ├── SleepServiceImpl.java
+│   │   │   │       └── UserServiceImpl.java
 │   │   │   ├── mapper/                       # MyBatis 映射器
 │   │   │   │   ├── BodyMapper.java
 │   │   │   │   ├── DietMapper.java
@@ -75,11 +85,16 @@ backend/
 │   │   │   │   └── LoginCheckInterceptor.java
 │   │   │   ├── config/                       # 配置类
 │   │   │   │   ├── AiConfig.java
+│   │   │   │   ├── AiPromptTemplate.java
 │   │   │   │   └── WebConfig.java
 │   │   │   ├── function/                     # Spring AI Function 定义
 │   │   │   │   ├── HealthDataFunctions.java
 │   │   │   │   └── WebSearchFunction.java
 │   │   │   └── utils/                        # 工具类
+│   │   │       ├── FunctionResultCache.java  # AI 函数结果缓存
+│   │   │       ├── JwtUtils.java             # JWT 解析/生成
+│   │   │       ├── PasswordEncoder.java      # 密码加密工具
+│   │   │       └── UserChatSessionManager.java
 │   │   └── resources/
 │   │       ├── application.properties        # 开发环境配置
 │   │       ├── application-prod.properties   # 生产环境配置
@@ -284,6 +299,8 @@ docker compose down
 - 自动重试机制（最多 3 次）
 - 流式超时限制：若 60 秒未收到模型输出将返回“AI 服务响应超时”提示
 - 内置函数：健康数据 CRUD（Body/Sleep/Diet/Exercise）与联网搜索 `webSearch`
+- 系统提示自动注入服务器日期与时间，模型默认以当天日期落库，无需额外函数
+- `FunctionResultCache` 避免模型在同一次对话中重复查询数据库或外部接口
 
 SSE 流式接口调试示例：
 

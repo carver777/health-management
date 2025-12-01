@@ -22,6 +22,21 @@ import reactor.core.publisher.Flux;
 @RequestMapping("/chat")
 public class ChatController {
 
+  private static final String[] FUNCTION_TOOLBOX = {
+    "queryBodyMetrics",
+    "addBodyMetric",
+    "querySleepRecords",
+    "addSleepRecord",
+    "updateSleepRecord",
+    "queryDietRecords",
+    "addDietRecord",
+    "updateDietRecord",
+    "queryExerciseRecords",
+    "addExerciseRecord",
+    "updateExerciseRecord",
+    "webSearch"
+  };
+
   @Autowired private ChatModel chatModel;
   @Autowired private UserChatSessionManager sessionManager;
   @Autowired private JwtUtils jwtUtils;
@@ -32,10 +47,11 @@ public class ChatController {
 
     String userId = extractUserIdFromToken(token);
     ChatMemory chatMemory = sessionManager.getChatMemory(userId);
+    String systemPrompt = AiPromptTemplate.buildSystemPrompt();
 
     ChatClient chatClient =
         ChatClient.builder(chatModel)
-            .defaultSystem(AiPromptTemplate.SYSTEM_PROMPT)
+            .defaultSystem(systemPrompt)
             .defaultAdvisors(new MessageChatMemoryAdvisor(chatMemory))
             .build();
 
@@ -77,25 +93,13 @@ public class ChatController {
 
     // 在用户消息中注入用户 ID，供 Function 使用
     String enhancedMessage = String.format("[用户ID: %s] %s", userId, message);
+    String systemPrompt = AiPromptTemplate.buildSystemPrompt();
 
     ChatClient chatClient =
         ChatClient.builder(chatModel)
-            .defaultSystem(AiPromptTemplate.SYSTEM_PROMPT)
+            .defaultSystem(systemPrompt)
             .defaultAdvisors(new MessageChatMemoryAdvisor(chatMemory))
-            .defaultFunctions(
-                "getCurrentDate",
-                "queryBodyMetrics",
-                "addBodyMetric",
-                "querySleepRecords",
-                "addSleepRecord",
-                "updateSleepRecord",
-                "queryDietRecords",
-                "addDietRecord",
-                "updateDietRecord",
-                "queryExerciseRecords",
-                "addExerciseRecord",
-                "updateExerciseRecord",
-                "webSearch")
+            .defaultFunctions(FUNCTION_TOOLBOX)
             .build();
 
     Flux<String> responseStream =

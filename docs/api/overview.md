@@ -42,9 +42,8 @@
 
 ## AI 助手函数能力
 
-`POST /chat/stream` 现在会自动调用一组受控函数来读写用户的健康数据，避免再通过前端绕行 REST 接口：
+`POST /chat/stream` 会在系统提示中附带服务器当前日期与时间，并自动调用一组受控函数来读写用户的健康数据，避免再通过前端绕行 REST 接口：
 
-- 系统工具：`getCurrentDate`
 - 身体数据：`queryBodyMetrics`、`addBodyMetric`
 - 睡眠数据：`querySleepRecords`、`addSleepRecord`、`updateSleepRecord`
 - 饮食数据：`queryDietRecords`、`addDietRecord`、`updateDietRecord`

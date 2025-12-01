@@ -11,6 +11,7 @@ import com.stringtinyst.healthlife.service.BodyService;
 import com.stringtinyst.healthlife.service.DietService;
 import com.stringtinyst.healthlife.service.ExerService;
 import com.stringtinyst.healthlife.service.SleepService;
+import com.stringtinyst.healthlife.utils.FunctionResultCache;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,46 +41,80 @@ import org.springframework.stereotype.Component;
 @Component
 public class HealthDataFunctions {
 
+  private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
   private final BodyService bodyService;
   private final SleepService sleepService;
   private final DietService dietService;
   private final ExerService exerService;
+  private final FunctionResultCache resultCache;
 
   public HealthDataFunctions(
       BodyService bodyService,
       SleepService sleepService,
       DietService dietService,
-      ExerService exerService) {
+      ExerService exerService,
+      FunctionResultCache resultCache) {
     this.bodyService = bodyService;
     this.sleepService = sleepService;
     this.dietService = dietService;
     this.exerService = exerService;
+    this.resultCache = resultCache;
   }
 
-  // ==================== 系统工具 ====================
-
-  /** 获取当前日期请求 */
-  @Data
-  @NoArgsConstructor
-  @AllArgsConstructor
-  public static class GetCurrentDateRequest {
-    @JsonPropertyDescription("请求类型，固定为 'current'")
-    private String type = "current";
+  @FunctionalInterface
+  private interface PageSupplier {
+    PageBean get() throws Exception;
   }
 
-  @Bean
-  @Description("获取当前系统日期，用于记录数据时使用正确的日期")
-  public Function<GetCurrentDateRequest, String> getCurrentDate() {
-    return request -> {
-      LocalDate today = LocalDate.now();
-      LocalDateTime now = LocalDateTime.now();
-      DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-      DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private String buildCacheKey(String domain, String userID, Object... parts) {
+    String safeUser = userID == null ? "anonymous" : userID;
+    StringBuilder key = new StringBuilder(domain).append(":").append(safeUser);
+    if (parts != null) {
+      for (Object part : parts) {
+        key.append(":").append(part == null ? "null" : part);
+      }
+    }
+    return key.toString();
+  }
 
-      return String.format(
-          "当前日期: %s\n当前时间: %s\n提示: 记录数据时请使用此日期，除非用户明确指定其他日期",
-          today.format(dateFormatter), now.format(timeFormatter));
-    };
+  private String userCachePrefix(String domain, String userID) {
+    return domain + ":" + (userID == null ? "anonymous" : userID);
+  }
+
+  private LocalDate parseDateOrNull(String value) {
+    return (value == null || value.isBlank()) ? null : LocalDate.parse(value, DATE_FORMATTER);
+  }
+
+  private LocalDate parseRequiredDate(String value) {
+    return LocalDate.parse(value, DATE_FORMATTER);
+  }
+
+  private LocalDateTime parseRequiredDateTime(String value) {
+    return LocalDateTime.parse(value, DATE_TIME_FORMATTER);
+  }
+
+  private String runCachedQuery(
+      String domain,
+      String userID,
+      PageSupplier supplier,
+      java.util.function.Function<PageBean, String> successFormatter,
+      String logLabel,
+      Object... cacheParts) {
+    String cacheKey = buildCacheKey(domain, userID, cacheParts);
+    return resultCache.getOrCompute(
+        cacheKey,
+        () -> {
+          try {
+            PageBean pageBean = supplier.get();
+            return successFormatter.apply(pageBean);
+          } catch (Exception e) {
+            log.error("{}失败", logLabel, e);
+            return logLabel + "失败: " + e.getMessage();
+          }
+        });
   }
 
   // ==================== 身体数据相关 ====================
@@ -110,21 +145,22 @@ public class HealthDataFunctions {
   @Description("查询用户的身体数据（身高、体重）记录")
   public Function<BodyQueryRequest, String> queryBodyMetrics() {
     return request -> {
-      try {
-        LocalDate startDate =
-            request.getStartDate() != null ? LocalDate.parse(request.getStartDate()) : null;
-        LocalDate endDate =
-            request.getEndDate() != null ? LocalDate.parse(request.getEndDate()) : null;
-
-        PageBean pageBean =
-            bodyService.page(
-                request.getPage(), request.getPageSize(), request.getUserID(), startDate, endDate);
-
-        return "查询成功，共找到 " + pageBean.getTotal() + " 条身体数据记录。数据: " + pageBean.getRows();
-      } catch (Exception e) {
-        log.error("查询身体数据失败", e);
-        return "查询身体数据失败: " + e.getMessage();
-      }
+      return runCachedQuery(
+          "body.query",
+          request.getUserID(),
+          () ->
+              bodyService.page(
+                  request.getPage(),
+                  request.getPageSize(),
+                  request.getUserID(),
+                  parseDateOrNull(request.getStartDate()),
+                  parseDateOrNull(request.getEndDate())),
+          pageBean -> "查询成功，共找到 " + pageBean.getTotal() + " 条身体数据记录。数据: " + pageBean.getRows(),
+          "查询身体数据",
+          request.getStartDate(),
+          request.getEndDate(),
+          request.getPage(),
+          request.getPageSize());
     };
   }
 
@@ -159,12 +195,13 @@ public class HealthDataFunctions {
         body.setUserID(request.getUserID());
         body.setHeightCM(BigDecimal.valueOf(request.getHeightCM()));
         body.setWeightKG(BigDecimal.valueOf(request.getWeightKG()));
-        body.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        body.setRecordDate(parseRequiredDate(request.getRecordDate()));
 
         bodyService.addBody(body);
         int bodyMetricID = bodyService.searchbodyID(body);
 
         double bmi = request.getWeightKG() / Math.pow(request.getHeightCM() / 100, 2);
+        resultCache.evictByPrefix(userCachePrefix("body.query", request.getUserID()));
         return String.format("成功添加身体数据！记录 ID: %d，BMI: %.2f（正常范围 18.5-23.9）", bodyMetricID, bmi);
       } catch (Exception e) {
         log.error("添加身体数据失败", e);
@@ -201,21 +238,22 @@ public class HealthDataFunctions {
   @Description("查询用户的睡眠记录")
   public Function<SleepQueryRequest, String> querySleepRecords() {
     return request -> {
-      try {
-        LocalDate startDate =
-            request.getStartDate() != null ? LocalDate.parse(request.getStartDate()) : null;
-        LocalDate endDate =
-            request.getEndDate() != null ? LocalDate.parse(request.getEndDate()) : null;
-
-        PageBean pageBean =
-            sleepService.page(
-                request.getPage(), request.getPageSize(), request.getUserID(), startDate, endDate);
-
-        return "查询成功，共找到 " + pageBean.getTotal() + " 条睡眠记录。数据: " + pageBean.getRows();
-      } catch (Exception e) {
-        log.error("查询睡眠记录失败", e);
-        return "查询睡眠记录失败: " + e.getMessage();
-      }
+      return runCachedQuery(
+          "sleep.query",
+          request.getUserID(),
+          () ->
+              sleepService.page(
+                  request.getPage(),
+                  request.getPageSize(),
+                  request.getUserID(),
+                  parseDateOrNull(request.getStartDate()),
+                  parseDateOrNull(request.getEndDate())),
+          pageBean -> "查询成功，共找到 " + pageBean.getTotal() + " 条睡眠记录。数据: " + pageBean.getRows(),
+          "查询睡眠记录",
+          request.getStartDate(),
+          request.getEndDate(),
+          request.getPage(),
+          request.getPageSize());
     };
   }
 
@@ -246,9 +284,8 @@ public class HealthDataFunctions {
   public Function<AddSleepRequest, String> addSleepRecord() {
     return request -> {
       try {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime bedTime = LocalDateTime.parse(request.getBedTime(), formatter);
-        LocalDateTime wakeTime = LocalDateTime.parse(request.getWakeTime(), formatter);
+        LocalDateTime bedTime = parseRequiredDateTime(request.getBedTime());
+        LocalDateTime wakeTime = parseRequiredDateTime(request.getWakeTime());
 
         if (bedTime.isAfter(wakeTime)) {
           return "错误：入睡时间不能晚于起床时间";
@@ -256,7 +293,7 @@ public class HealthDataFunctions {
 
         Sleep sleep = new Sleep();
         sleep.setUserID(request.getUserID());
-        sleep.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        sleep.setRecordDate(parseRequiredDate(request.getRecordDate()));
         sleep.setBedTime(bedTime);
         sleep.setWakeTime(wakeTime);
 
@@ -266,6 +303,7 @@ public class HealthDataFunctions {
         long hours = java.time.Duration.between(bedTime, wakeTime).toHours();
         double hoursDecimal = java.time.Duration.between(bedTime, wakeTime).toMinutes() / 60.0;
 
+        resultCache.evictByPrefix(userCachePrefix("sleep.query", request.getUserID()));
         return String.format(
             "成功添加睡眠记录！记录 ID: %d，睡眠时长: %.1f 小时（建议 7-9 小时）", sleepItemID, hoursDecimal);
       } catch (Exception e) {
@@ -306,9 +344,8 @@ public class HealthDataFunctions {
   public Function<UpdateSleepRequest, String> updateSleepRecord() {
     return request -> {
       try {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        LocalDateTime bedTime = LocalDateTime.parse(request.getBedTime(), formatter);
-        LocalDateTime wakeTime = LocalDateTime.parse(request.getWakeTime(), formatter);
+        LocalDateTime bedTime = parseRequiredDateTime(request.getBedTime());
+        LocalDateTime wakeTime = parseRequiredDateTime(request.getWakeTime());
 
         if (bedTime.isAfter(wakeTime)) {
           return "错误：入睡时间不能晚于起床时间";
@@ -317,7 +354,7 @@ public class HealthDataFunctions {
         Sleep sleep = new Sleep();
         sleep.setSleepItemID(request.getSleepItemID());
         sleep.setUserID(request.getUserID());
-        sleep.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        sleep.setRecordDate(parseRequiredDate(request.getRecordDate()));
         sleep.setBedTime(bedTime);
         sleep.setWakeTime(wakeTime);
 
@@ -325,6 +362,7 @@ public class HealthDataFunctions {
 
         double hoursDecimal = java.time.Duration.between(bedTime, wakeTime).toMinutes() / 60.0;
 
+        resultCache.evictByPrefix(userCachePrefix("sleep.query", request.getUserID()));
         return String.format(
             "成功更新睡眠记录 ID: %d，新的睡眠时长: %.1f 小时", request.getSleepItemID(), hoursDecimal);
       } catch (Exception e) {
@@ -365,26 +403,24 @@ public class HealthDataFunctions {
   @Description("查询用户的饮食记录")
   public Function<DietQueryRequest, String> queryDietRecords() {
     return request -> {
-      try {
-        LocalDate startDate =
-            request.getStartDate() != null ? LocalDate.parse(request.getStartDate()) : null;
-        LocalDate endDate =
-            request.getEndDate() != null ? LocalDate.parse(request.getEndDate()) : null;
-
-        PageBean pageBean =
-            dietService.page(
-                request.getPage(),
-                request.getPageSize(),
-                request.getUserID(),
-                startDate,
-                endDate,
-                request.getMealType());
-
-        return "查询成功，共找到 " + pageBean.getTotal() + " 条饮食记录。数据: " + pageBean.getRows();
-      } catch (Exception e) {
-        log.error("查询饮食记录失败", e);
-        return "查询饮食记录失败: " + e.getMessage();
-      }
+      return runCachedQuery(
+          "diet.query",
+          request.getUserID(),
+          () ->
+              dietService.page(
+                  request.getPage(),
+                  request.getPageSize(),
+                  request.getUserID(),
+                  parseDateOrNull(request.getStartDate()),
+                  parseDateOrNull(request.getEndDate()),
+                  request.getMealType()),
+          pageBean -> "查询成功，共找到 " + pageBean.getTotal() + " 条饮食记录。数据: " + pageBean.getRows(),
+          "查询饮食记录",
+          request.getStartDate(),
+          request.getEndDate(),
+          request.getMealType(),
+          request.getPage(),
+          request.getPageSize());
     };
   }
 
@@ -421,7 +457,7 @@ public class HealthDataFunctions {
       try {
         Diet diet = new Diet();
         diet.setUserID(request.getUserID());
-        diet.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        diet.setRecordDate(parseRequiredDate(request.getRecordDate()));
         diet.setFoodName(request.getFoodName());
         diet.setMealType(request.getMealType());
         diet.setEstimatedCalories(request.getEstimatedCalories());
@@ -429,6 +465,7 @@ public class HealthDataFunctions {
         dietService.addDiet(diet);
         int dietItemID = diet.getDietItemID();
 
+        resultCache.evictByPrefix(userCachePrefix("diet.query", request.getUserID()));
         return String.format(
             "成功添加饮食记录！记录 ID: %d，食物: %s，餐次: %s，卡路里: %d kcal",
             dietItemID,
@@ -480,13 +517,14 @@ public class HealthDataFunctions {
         Diet diet = new Diet();
         diet.setDietItemID(request.getDietItemID());
         diet.setUserID(request.getUserID());
-        diet.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        diet.setRecordDate(parseRequiredDate(request.getRecordDate()));
         diet.setFoodName(request.getFoodName());
         diet.setMealType(request.getMealType());
         diet.setEstimatedCalories(request.getEstimatedCalories());
 
         dietService.updateDiet(diet);
 
+        resultCache.evictByPrefix(userCachePrefix("diet.query", request.getUserID()));
         return String.format(
             "成功更新饮食记录 ID: %d，食物: %s，餐次: %s，卡路里: %d kcal",
             request.getDietItemID(),
@@ -531,26 +569,24 @@ public class HealthDataFunctions {
   @Description("查询用户的运动记录")
   public Function<ExerciseQueryRequest, String> queryExerciseRecords() {
     return request -> {
-      try {
-        LocalDate startDate =
-            request.getStartDate() != null ? LocalDate.parse(request.getStartDate()) : null;
-        LocalDate endDate =
-            request.getEndDate() != null ? LocalDate.parse(request.getEndDate()) : null;
-
-        PageBean pageBean =
-            exerService.page(
-                request.getPage(),
-                request.getPageSize(),
-                request.getUserID(),
-                startDate,
-                endDate,
-                request.getExerciseType());
-
-        return "查询成功，共找到 " + pageBean.getTotal() + " 条运动记录。数据: " + pageBean.getRows();
-      } catch (Exception e) {
-        log.error("查询运动记录失败", e);
-        return "查询运动记录失败: " + e.getMessage();
-      }
+      return runCachedQuery(
+          "exercise.query",
+          request.getUserID(),
+          () ->
+              exerService.page(
+                  request.getPage(),
+                  request.getPageSize(),
+                  request.getUserID(),
+                  parseDateOrNull(request.getStartDate()),
+                  parseDateOrNull(request.getEndDate()),
+                  request.getExerciseType()),
+          pageBean -> "查询成功，共找到 " + pageBean.getTotal() + " 条运动记录。数据: " + pageBean.getRows(),
+          "查询运动记录",
+          request.getStartDate(),
+          request.getEndDate(),
+          request.getExerciseType(),
+          request.getPage(),
+          request.getPageSize());
     };
   }
 
@@ -681,7 +717,7 @@ public class HealthDataFunctions {
 
         Exer exer = new Exer();
         exer.setUserID(request.getUserID());
-        exer.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        exer.setRecordDate(parseRequiredDate(request.getRecordDate()));
         exer.setExerciseType(request.getExerciseType());
         exer.setDurationMinutes(request.getDurationMinutes());
         exer.setEstimatedCaloriesBurned(calories);
@@ -703,6 +739,7 @@ public class HealthDataFunctions {
           result.append("建议先记录您的身高体重数据，以获得更准确的热量消耗计算。");
         }
 
+        resultCache.evictByPrefix(userCachePrefix("exercise.query", request.getUserID()));
         return result.toString();
       } catch (Exception e) {
         log.error("添加运动记录失败", e);
@@ -756,13 +793,14 @@ public class HealthDataFunctions {
         Exer exer = new Exer();
         exer.setExerciseItemID(request.getExerciseItemID());
         exer.setUserID(request.getUserID());
-        exer.setRecordDate(LocalDate.parse(request.getRecordDate()));
+        exer.setRecordDate(parseRequiredDate(request.getRecordDate()));
         exer.setExerciseType(request.getExerciseType());
         exer.setDurationMinutes(request.getDurationMinutes());
         exer.setEstimatedCaloriesBurned(request.getEstimatedCaloriesBurned());
 
         exerService.updateExer(exer);
 
+        resultCache.evictByPrefix(userCachePrefix("exercise.query", request.getUserID()));
         return String.format(
             "成功更新运动记录 ID: %d，运动: %s，时长: %d 分钟，消耗: %d kcal",
             request.getExerciseItemID(),
