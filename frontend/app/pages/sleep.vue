@@ -106,35 +106,18 @@ const columns: TableColumn<SleepRecord>[] = [
     accessorKey: 'recordDate',
     header: '记录日期',
     cell: ({ row }) => {
-      return h(
-        'span',
-        {
-          class:
-            'rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-        },
-        formatDisplayDate(row.original.recordDate)
-      )
+      return h('span', { class: 'text-sm' }, formatDisplayDate(row.original.recordDate))
     }
   },
   {
     accessorKey: 'bedTime',
     header: '入睡时间',
-    cell: ({ row }) =>
-      h(
-        'span',
-        { class: 'text-sm text-gray-700 dark:text-gray-200' },
-        formatDateTimeDisplay(row.original.bedTime)
-      )
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatDateTimeDisplay(row.original.bedTime))
   },
   {
     accessorKey: 'wakeTime',
     header: '起床时间',
-    cell: ({ row }) =>
-      h(
-        'span',
-        { class: 'text-sm text-gray-700 dark:text-gray-200' },
-        formatDateTimeDisplay(row.original.wakeTime)
-      )
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatDateTimeDisplay(row.original.wakeTime))
   },
   {
     id: 'duration',

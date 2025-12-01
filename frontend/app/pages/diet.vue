@@ -32,7 +32,7 @@ const pageInfo = reactive<PageInfo>({
 })
 
 // 筛选器状态
-const filterMealType = ref<string>('all')
+const filterMealType = ref<{ label: string; value: string; icon: string } | undefined>(undefined)
 
 // 日期配置
 const startDateCalendar = shallowRef<DateValue | null>(null)
@@ -84,27 +84,6 @@ const loadHealthGoals = () => {
   }
 }
 
-// 获取用餐类型的颜色和图标
-const getMealTypeColor = (type: string): 'success' | 'primary' | 'warning' | 'neutral' => {
-  const colorMap: Record<string, 'success' | 'primary' | 'warning' | 'neutral'> = {
-    早餐: 'success',
-    午餐: 'primary',
-    晚餐: 'warning',
-    加餐: 'neutral'
-  }
-  return colorMap[type] || 'neutral'
-}
-
-const getMealTypeIcon = (type: string) => {
-  const iconMap: Record<string, string> = {
-    早餐: 'mdi:bread-slice',
-    午餐: 'mdi:rice',
-    晚餐: 'mdi:noodles',
-    加餐: 'mdi:food-apple'
-  }
-  return iconMap[type] || 'mdi:food-apple'
-}
-
 // 热量等级计算
 const getCalorieLevel = (
   calories: number
@@ -120,46 +99,21 @@ const columns: TableColumn<DietRecord>[] = [
     accessorKey: 'recordDate',
     header: '记录日期',
     cell: ({ row }) => {
-      return h(
-        'span',
-        {
-          class:
-            'rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-        },
-        formatDisplayDate(row.original.recordDate)
-      )
+      return h('span', { class: 'text-sm' }, formatDisplayDate(row.original.recordDate))
     }
   },
   {
     accessorKey: 'mealType',
     header: '用餐类型',
     cell: ({ row }) => {
-      const color = getMealTypeColor(row.original.mealType)
-      const icon = getMealTypeIcon(row.original.mealType)
-      const colorClasses: Record<string, string> = {
-        success: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-        primary: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-        warning: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
-        neutral: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-      }
-      return h(
-        'span',
-        {
-          class: `inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${colorClasses[color]}`
-        },
-        [h('i', { class: `${icon} text-sm` }), row.original.mealType]
-      )
+      return h('span', { class: 'text-sm font-medium' }, row.original.mealType)
     }
   },
   {
     accessorKey: 'foodName',
     header: '食物名称',
     cell: ({ row }) => {
-      return h(
-        'span',
-        { class: 'font-medium text-gray-900 dark:text-gray-100' },
-        row.original.foodName
-      )
+      return h('span', { class: 'text-sm' }, row.original.foodName)
     }
   },
   {
@@ -294,8 +248,8 @@ const loadData = async () => {
       }
     }
 
-    if (filterMealType.value && filterMealType.value !== 'all') {
-      params.mealType = filterMealType.value
+    if (filterMealType.value && filterMealType.value.value !== 'all') {
+      params.mealType = filterMealType.value.value
     }
 
     const response = await $fetch<{
@@ -373,7 +327,7 @@ const deleteItem = async (item: DietRecord) => {
 const resetFilter = () => {
   startDateCalendar.value = null
   endDateCalendar.value = null
-  filterMealType.value = 'all'
+  filterMealType.value = undefined
   pageInfo.current = 1
   loadData()
 }
@@ -495,31 +449,19 @@ onMounted(() => {
             <label for="diet-filter-meal-type" class="mb-2 block text-sm font-medium"
               >用餐类型</label
             >
-            <USelect
+            <USelectMenu
               id="diet-filter-meal-type"
               v-model="filterMealType"
               :items="mealTypeOptions"
-              value-key="value"
               placeholder="全部"
               class="w-full"
               @change="loadData"
             >
               <template #leading="{ modelValue }">
-                <UIcon
-                  :name="
-                    (modelValue && mealTypeOptions.find((o) => o.value === modelValue)?.icon) ||
-                    'mdi:silverware'
-                  "
-                  :class="!modelValue || modelValue === 'all' ? 'text-gray-400' : ''"
-                />
+                <UIcon v-if="modelValue" :name="modelValue.icon" class="h-5 w-5" />
+                <UIcon v-else name="mdi:silverware" class="h-5 w-5 text-gray-400" />
               </template>
-              <template #item="{ item }">
-                <div class="flex items-center gap-2">
-                  <UIcon :name="item.icon" />
-                  <span>{{ item.label }}</span>
-                </div>
-              </template>
-            </USelect>
+            </USelectMenu>
           </div>
 
           <!-- 重置按钮 -->

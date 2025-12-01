@@ -78,20 +78,23 @@ const loadHealthGoals = () => {
 const columns: TableColumn<BodyData>[] = [
   {
     accessorKey: 'recordDate',
-    header: '记录日期'
+    header: '记录日期',
+    cell: ({ row }) => {
+      return h('span', { class: 'text-sm' }, formatDisplayDate(row.original.recordDate))
+    }
   },
   {
     accessorKey: 'weightKG',
     header: '体重 (kg)',
     cell: ({ row }) => {
-      return `${row.getValue<number>('weightKG').toFixed(1)} kg`
+      return h('span', { class: 'text-sm' }, `${row.getValue<number>('weightKG').toFixed(1)} kg`)
     }
   },
   {
     accessorKey: 'heightCM',
     header: '身高 (cm)',
     cell: ({ row }) => {
-      return `${row.getValue<number>('heightCM').toFixed(0)} cm`
+      return h('span', { class: 'text-sm' }, `${row.getValue<number>('heightCM').toFixed(0)} cm`)
     }
   },
   {

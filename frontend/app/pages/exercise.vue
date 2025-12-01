@@ -32,7 +32,9 @@ const pageInfo = reactive<PageInfo>({
 })
 
 // 筛选器状态
-const filterExerciseType = ref<string | undefined>(undefined)
+const filterExerciseType = ref<{ label: string; value: string; icon: string } | undefined>(
+  undefined
+)
 
 // 日期配置
 const startDateCalendar = shallowRef<DateValue | null>(null)
@@ -85,12 +87,6 @@ const loadHealthGoals = () => {
   }
 }
 
-// 获取运动类型的图标
-const getExerciseTypeIcon = (type: string) => {
-  const option = exerciseTypeOptions.find((o) => o.value === type)
-  return option?.icon || 'mdi:lightning-bolt'
-}
-
 // 运动强度等级
 const getIntensityLevel = (
   caloriesBurned: number | null,
@@ -109,29 +105,14 @@ const columns: TableColumn<ExerciseRecord>[] = [
     accessorKey: 'recordDate',
     header: '记录日期',
     cell: ({ row }) => {
-      return h(
-        'span',
-        {
-          class:
-            'rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-        },
-        formatDisplayDate(row.original.recordDate)
-      )
+      return h('span', { class: 'text-sm' }, formatDisplayDate(row.original.recordDate))
     }
   },
   {
     accessorKey: 'exerciseType',
     header: '运动类型',
     cell: ({ row }) => {
-      const icon = getExerciseTypeIcon(row.original.exerciseType)
-      return h(
-        'span',
-        {
-          class:
-            'inline-flex items-center gap-1.5 rounded-md bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-        },
-        [h('i', { class: icon }), row.original.exerciseType]
-      )
+      return h('span', { class: 'text-sm font-medium' }, row.original.exerciseType)
     }
   },
   {
@@ -238,7 +219,7 @@ const loadData = async () => {
     }
 
     if (filterExerciseType.value) {
-      params.exerciseType = filterExerciseType.value
+      params.exerciseType = filterExerciseType.value.value
     }
 
     const response = await $fetch<{
@@ -476,7 +457,6 @@ onMounted(() => {
               id="exercise-filter-type"
               v-model="filterExerciseType"
               :items="exerciseTypeOptions"
-              value-key="value"
               placeholder="全部"
               :search-input="{
                 placeholder: '输入运动类型',
@@ -485,11 +465,9 @@ onMounted(() => {
               class="w-full"
               @change="loadData"
             >
-              <template #leading>
-                <UIcon
-                  :name="filterExerciseType ? getExerciseTypeIcon(filterExerciseType) : 'mdi:human'"
-                  class="h-5 w-5 text-gray-400"
-                />
+              <template #leading="{ modelValue }">
+                <UIcon v-if="modelValue" :name="modelValue.icon" class="h-5 w-5" />
+                <UIcon v-else name="mdi:human" class="h-5 w-5 text-gray-400" />
               </template>
             </USelectMenu>
           </div>
