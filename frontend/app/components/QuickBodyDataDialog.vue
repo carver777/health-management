@@ -47,11 +47,8 @@ const state = reactive<Schema>({
 
 const submitting = ref(false)
 
-// 是否为编辑模式
 const isEditMode = computed(() => !!props.editItem)
-
-// 对话框标题
-const dialogTitle = computed(() => (isEditMode.value ? '编辑身体数据' : '快速记录体重'))
+const dialogTitle = '快速记录身体数据'
 
 // 加载用户最新的身体数据或编辑数据
 const loadLatestData = async () => {

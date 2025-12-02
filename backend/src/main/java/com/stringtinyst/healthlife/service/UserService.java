@@ -10,4 +10,6 @@ public interface UserService {
   User getUser(String userID);
 
   boolean updateUser(User user);
+
+  boolean resetPassword(String nickname, String email, String newPassword);
 }

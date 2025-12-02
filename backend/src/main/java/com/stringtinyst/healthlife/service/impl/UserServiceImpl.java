@@ -6,6 +6,7 @@ import com.stringtinyst.healthlife.service.UserService;
 import com.stringtinyst.healthlife.utils.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /** User service implementation */
 @Service
@@ -57,5 +58,15 @@ public class UserServiceImpl implements UserService {
   @Override
   public boolean updateUser(User user) {
     return usersMapper.updateUser(user) > 0;
+  }
+
+  @Override
+  public boolean resetPassword(String nickname, String email, String newPassword) {
+    if (!StringUtils.hasText(newPassword)) {
+      throw new IllegalArgumentException("新密码不能为空");
+    }
+
+    String encodedPassword = PasswordEncoder.encode(newPassword);
+    return usersMapper.updatePasswordByNicknameAndEmail(nickname, email, encodedPassword) > 0;
   }
 }

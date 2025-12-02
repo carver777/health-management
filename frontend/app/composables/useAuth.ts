@@ -117,6 +117,35 @@ export const useAuth = () => {
     }
   }
 
+  // 重置密码
+  const resetPassword = async (payload: PasswordResetRequest) => {
+    try {
+      const response = await $fetch<{ code: number; msg?: string }>('/api/auth/password/reset', {
+        method: 'POST',
+        body: payload
+      })
+
+      if (response.code === 1) {
+        toast.add({
+          title: '密码已更新',
+          description: '请使用新密码登录',
+          color: 'success'
+        })
+        return true
+      } else {
+        throw new Error(response.msg || '重置密码失败')
+      }
+    } catch (error: unknown) {
+      const apiError = error as ApiError
+      toast.add({
+        title: '重置密码失败',
+        description: apiError.message || apiError.response?.data?.message || '请稍后重试',
+        color: 'error'
+      })
+      return false
+    }
+  }
+
   // 获取用户信息
   const fetchUserProfile = async (silent = false) => {
     if (!token.value) {
@@ -231,6 +260,7 @@ export const useAuth = () => {
     isLoggedIn,
     login,
     register,
+    resetPassword,
     fetchUserProfile,
     updateProfile,
     logout

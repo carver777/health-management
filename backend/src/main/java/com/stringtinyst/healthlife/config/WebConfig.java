@@ -16,8 +16,10 @@ public class WebConfig implements WebMvcConfigurer {
     "/error",
     "/auth/login",
     "/auth/register",
+    "/auth/password/reset",
     "/api/auth/login",
-    "/api/auth/register"
+    "/api/auth/register",
+    "/api/auth/password/reset"
   };
 
   private final LoginCheckInterceptor loginCheckInterceptor;

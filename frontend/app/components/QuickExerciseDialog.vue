@@ -337,9 +337,38 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   >
     <template #body="{ close }">
       <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+        <UFormField label="记录日期" name="recordDate">
+          <DatePicker v-model="calendarValue" />
+        </UFormField>
+
         <div class="grid grid-cols-2 gap-4">
-          <UFormField label="记录日期" name="recordDate">
-            <DatePicker v-model="calendarValue" block />
+          <UFormField label="运动类型" name="exerciseType">
+            <USelectMenu
+              v-model="state.exerciseType"
+              :items="exerciseTypeOptions"
+              value-key="value"
+              placeholder="选择运动类型"
+              :search-input="{
+                placeholder: '输入运动类型',
+                icon: 'mdi:magnify'
+              }"
+            >
+              <template #leading="{ modelValue }">
+                <UIcon
+                  :name="
+                    (modelValue && exerciseTypeOptions.find((o) => o.value === modelValue)?.icon) ||
+                    'mdi:human'
+                  "
+                  :class="!modelValue ? 'text-gray-400' : ''"
+                />
+              </template>
+              <template #item="{ item }">
+                <div class="flex items-center gap-2">
+                  <UIcon :name="item.icon" />
+                  <span>{{ item.label }}</span>
+                </div>
+              </template>
+            </USelectMenu>
           </UFormField>
 
           <UFormField label="运动时长" name="durationMinutes">
@@ -356,35 +385,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             </UInput>
           </UFormField>
         </div>
-
-        <UFormField label="运动类型" name="exerciseType">
-          <USelectMenu
-            v-model="state.exerciseType"
-            :items="exerciseTypeOptions"
-            value-key="value"
-            placeholder="选择运动类型"
-            :search-input="{
-              placeholder: '输入运动类型',
-              icon: 'mdi:magnify'
-            }"
-          >
-            <template #leading="{ modelValue }">
-              <UIcon
-                :name="
-                  (modelValue && exerciseTypeOptions.find((o) => o.value === modelValue)?.icon) ||
-                  'mdi:human'
-                "
-                :class="!modelValue ? 'text-gray-400' : ''"
-              />
-            </template>
-            <template #item="{ item }">
-              <div class="flex items-center gap-2">
-                <UIcon :name="item.icon" />
-                <span>{{ item.label }}</span>
-              </div>
-            </template>
-          </USelectMenu>
-        </UFormField>
 
         <UFormField label="运动强度" name="intensity">
           <div class="flex w-full gap-2">

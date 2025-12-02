@@ -25,7 +25,9 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
     "/auth/login",
     "/auth/register",
     "/api/auth/login",
-    "/api/auth/register"
+    "/api/auth/register",
+    "/auth/password/reset",
+    "/api/auth/password/reset"
   };
 
   @Autowired private JwtUtils jwtUtils;

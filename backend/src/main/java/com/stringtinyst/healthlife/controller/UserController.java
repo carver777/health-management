@@ -1,6 +1,7 @@
 package com.stringtinyst.healthlife.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.stringtinyst.healthlife.pojo.PasswordResetRequest;
 import com.stringtinyst.healthlife.pojo.Result;
 import com.stringtinyst.healthlife.pojo.User;
 import com.stringtinyst.healthlife.service.UserService;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -80,5 +82,32 @@ public class UserController {
         return Result.error("登录失败，请稍后重试");
       }
     }
+  }
+
+  @PostMapping("/password/reset")
+  public Result resetPassword(@RequestBody PasswordResetRequest request) {
+    if (request == null
+        || !StringUtils.hasText(request.getNickname())
+        || !StringUtils.hasText(request.getEmail())
+        || !StringUtils.hasText(request.getNewPassword())
+        || !StringUtils.hasText(request.getConfirmPassword())) {
+      return Result.error("请提供完整的昵称、邮箱、新密码与确认密码信息");
+    }
+
+    if (request.getNewPassword().length() < 6) {
+      return Result.error("新密码长度至少 6 个字符");
+    }
+
+    if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+      return Result.error("两次输入的密码不一致");
+    }
+
+    boolean updated =
+        userService.resetPassword(
+            request.getNickname(), request.getEmail(), request.getNewPassword());
+    if (!updated) {
+      return Result.error("昵称与邮箱不匹配，无法修改密码");
+    }
+    return Result.success();
   }
 }

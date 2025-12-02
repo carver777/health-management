@@ -3,6 +3,7 @@ package com.stringtinyst.healthlife.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -98,5 +99,36 @@ class UserServiceImplTest {
     String result = userService.loginUser(request);
 
     assertThat(result).isEqualTo("user-1");
+  }
+
+  @Test
+  void resetPasswordShouldEncodeAndPersistWhenUserMatches() {
+    when(usersMapper.updatePasswordByNicknameAndEmail(any(), any(), any())).thenReturn(1);
+
+    boolean updated = userService.resetPassword("Alpha", "user@example.com", "newSecret");
+
+    assertThat(updated).isTrue();
+    ArgumentCaptor<String> hashedCaptor = ArgumentCaptor.forClass(String.class);
+    verify(usersMapper)
+        .updatePasswordByNicknameAndEmail(
+            eq("Alpha"), eq("user@example.com"), hashedCaptor.capture());
+    assertThat(hashedCaptor.getValue()).contains("$");
+  }
+
+  @Test
+  void resetPasswordShouldReturnFalseWhenNoRowsAffected() {
+    when(usersMapper.updatePasswordByNicknameAndEmail(eq("Alpha"), eq("user@example.com"), any()))
+        .thenReturn(0);
+
+    boolean updated = userService.resetPassword("Alpha", "user@example.com", "encoded");
+
+    assertThat(updated).isFalse();
+  }
+
+  @Test
+  void resetPasswordShouldFailWhenPasswordBlank() {
+    assertThatThrownBy(() -> userService.resetPassword("Alpha", "user@example.com", " "))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("新密码不能为空");
   }
 }

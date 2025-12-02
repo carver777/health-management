@@ -10,6 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PageBean {
   private Long total; // 总记录数
-  // 多态子类可以赋值给父类
   private List rows; // 数据列表
 }

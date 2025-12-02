@@ -65,6 +65,7 @@
 2. 后端验证后签发 JWT，返回标准响应 `Result{code=1, data=token}`
 3. 前端通过 Cookie 与 `useState` 持久化 Token，路由中间件 `auth.ts` 根据 Token 控制访问
 4. 后端拦截器 `LoginCheckInterceptor` 在每个受保护接口执行校验，并对无效 Token 做统一错误响应
+5. 用户可调用白名单接口 `POST /auth/password/reset`，凭昵称 + 邮箱匹配重置密码
 
 ### 健康数据采集流程
 

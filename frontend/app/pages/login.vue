@@ -5,8 +5,9 @@ import { z } from 'zod'
 
 definePageMeta({ layout: 'blank' })
 
-const { login, register } = useAuth()
+const { login, register, resetPassword: resetPasswordApi } = useAuth()
 const isRegister = ref(useRoute().query.mode === 'register')
+const isReset = ref(false)
 
 const passwordSchema = z.string().min(6, '密码长度至少 6 个字符')
 
@@ -28,8 +29,21 @@ const registerSchema = z
     path: ['confirmPassword']
   })
 
+const resetSchema = z
+  .object({
+    nickname: z.string().min(2, '昵称长度至少 2 个字符').max(20, '昵称长度最多 20 个字符'),
+    email: z.email('请输入正确的邮箱格式'),
+    newPassword: passwordSchema,
+    confirmPassword: passwordSchema
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: '两次输入的密码不一致',
+    path: ['confirmPassword']
+  })
+
 type LoginSchema = z.output<typeof loginSchema>
 type RegisterSchema = z.output<typeof registerSchema>
+type ResetSchema = z.output<typeof resetSchema>
 
 const loginState = reactive<LoginSchema>({ email: '', password: '' })
 const registerState = reactive<RegisterSchema>({
@@ -39,10 +53,22 @@ const registerState = reactive<RegisterSchema>({
   confirmPassword: '',
   gender: '男'
 })
+const resetState = reactive<ResetSchema>({
+  nickname: '',
+  email: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 const dateOfBirthError = ref('')
-const showPassword = reactive({ login: false, register: false, confirm: false })
+const showPassword = reactive({
+  login: false,
+  register: false,
+  confirm: false,
+  reset: false,
+  resetConfirm: false
+})
 
 const resetForm = () => {
   Object.assign(loginState, { email: '', password: '' })
@@ -53,9 +79,21 @@ const resetForm = () => {
     confirmPassword: '',
     gender: '男'
   })
+  Object.assign(resetState, {
+    nickname: '',
+    email: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
   calendarValue.value = getTodayDateValue()
   dateOfBirthError.value = ''
-  Object.assign(showPassword, { login: false, register: false, confirm: false })
+  Object.assign(showPassword, {
+    login: false,
+    register: false,
+    confirm: false,
+    reset: false,
+    resetConfirm: false
+  })
 }
 
 async function onLoginSubmit(event: FormSubmitEvent<LoginSchema>) {
@@ -83,13 +121,34 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
   }
 }
 
+async function onResetSubmit(event: FormSubmitEvent<ResetSchema>) {
+  const success = await resetPasswordApi({
+    nickname: event.data.nickname.trim(),
+    email: event.data.email,
+    newPassword: event.data.newPassword,
+    confirmPassword: event.data.confirmPassword
+  })
+
+  if (success) {
+    switchToLogin()
+  }
+}
+
 function switchToRegister() {
   isRegister.value = true
+  isReset.value = false
   resetForm()
 }
 
 function switchToLogin() {
   isRegister.value = false
+  isReset.value = false
+  resetForm()
+}
+
+function switchToReset() {
+  isRegister.value = false
+  isReset.value = true
   resetForm()
 }
 </script>
@@ -105,7 +164,7 @@ function switchToLogin() {
 
       <!-- 登录表单 -->
       <UForm
-        v-if="!isRegister"
+        v-if="!isRegister && !isReset"
         :schema="loginSchema"
         :state="loginState"
         class="space-y-4"
@@ -151,11 +210,14 @@ function switchToLogin() {
         <UButton variant="ghost" block color="neutral" @click="switchToRegister">
           没有账户？点击注册
         </UButton>
+        <UButton variant="ghost" block color="neutral" @click="switchToReset">
+          忘记密码？点击重置
+        </UButton>
       </UForm>
 
       <!-- 注册表单 -->
       <UForm
-        v-else
+        v-else-if="isRegister"
         :schema="registerSchema"
         :state="registerState"
         class="space-y-4"
@@ -271,6 +333,92 @@ function switchToLogin() {
         <UButton variant="ghost" block color="neutral" @click="switchToLogin">
           已有账户？点击登录
         </UButton>
+      </UForm>
+
+      <!-- 重置密码表单 -->
+      <UForm
+        v-else
+        :schema="resetSchema"
+        :state="resetState"
+        class="space-y-4"
+        @submit="onResetSubmit"
+      >
+        <UFormField label="昵称" name="nickname">
+          <UInput
+            v-model="resetState.nickname"
+            placeholder="请输入注册时的昵称"
+            size="lg"
+            class="w-full"
+          >
+            <template #leading>
+              <UIcon name="heroicons:user" />
+            </template>
+          </UInput>
+        </UFormField>
+
+        <UFormField label="邮箱" name="email">
+          <UInput
+            v-model="resetState.email"
+            type="email"
+            placeholder="请输入邮箱"
+            size="lg"
+            class="w-full"
+          >
+            <template #leading>
+              <UIcon name="heroicons:envelope" />
+            </template>
+          </UInput>
+        </UFormField>
+
+        <UFormField label="新密码" name="newPassword">
+          <UInput
+            v-model="resetState.newPassword"
+            :type="showPassword.reset ? 'text' : 'password'"
+            placeholder="请输入新密码"
+            size="lg"
+            class="w-full"
+          >
+            <template #leading>
+              <UIcon name="heroicons:lock-closed" />
+            </template>
+            <template #trailing>
+              <UIcon
+                :name="showPassword.reset ? 'heroicons:eye-slash' : 'heroicons:eye'"
+                class="cursor-pointer"
+                @click="showPassword.reset = !showPassword.reset"
+              />
+            </template>
+          </UInput>
+        </UFormField>
+
+        <UFormField label="确认新密码" name="confirmPassword">
+          <UInput
+            v-model="resetState.confirmPassword"
+            :type="showPassword.resetConfirm ? 'text' : 'password'"
+            placeholder="请再次输入新密码"
+            size="lg"
+            class="w-full"
+          >
+            <template #leading>
+              <UIcon name="heroicons:lock-closed" />
+            </template>
+            <template #trailing>
+              <UIcon
+                :name="showPassword.resetConfirm ? 'heroicons:eye-slash' : 'heroicons:eye'"
+                class="cursor-pointer"
+                @click="showPassword.resetConfirm = !showPassword.resetConfirm"
+              />
+            </template>
+          </UInput>
+        </UFormField>
+
+        <p class="text-xs text-gray-500">
+          请输入注册时设置的昵称与邮箱，系统将验证两者匹配后允许重置密码
+        </p>
+
+        <UButton type="submit" block size="lg" color="primary" class="mt-2"> 重置密码 </UButton>
+
+        <UButton variant="ghost" block color="neutral" @click="switchToLogin"> 返回登录 </UButton>
       </UForm>
     </UCard>
   </div>

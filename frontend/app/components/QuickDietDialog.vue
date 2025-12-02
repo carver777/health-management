@@ -79,10 +79,10 @@ watch(isOpen, (val) => {
 
 // 餐次选项
 const mealTypeOptions = [
-  { label: '早餐', value: '早餐' },
-  { label: '午餐', value: '午餐' },
-  { label: '晚餐', value: '晚餐' },
-  { label: '加餐', value: '加餐' }
+  { label: '早餐', value: '早餐', icon: 'mdi:bread-slice' },
+  { label: '午餐', value: '午餐', icon: 'mdi:rice' },
+  { label: '晚餐', value: '晚餐', icon: 'mdi:noodles' },
+  { label: '加餐', value: '加餐', icon: 'mdi:food-apple' }
 ]
 
 // 热量等级计算
@@ -189,36 +189,46 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   >
     <template #body="{ close }">
       <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3">
           <UFormField label="记录日期" name="recordDate">
-            <DatePicker v-model="calendarValue" block />
+            <DatePicker v-model="calendarValue" />
           </UFormField>
-
-          <UFormField label="餐次" name="mealType">
-            <USelect v-model="state.mealType" :items="mealTypeOptions" placeholder="选择餐次" />
+          <UFormField label="食物名称" name="foodName">
+            <UInput v-model="state.foodName" placeholder="请输入食物名称">
+              <template #leading>
+                <UIcon name="mdi:food" />
+              </template>
+            </UInput>
           </UFormField>
         </div>
 
-        <UFormField label="食物名称" name="foodName">
-          <UInput v-model="state.foodName" placeholder="请输入食物名称">
-            <template #leading>
-              <UIcon name="mdi:food" />
-            </template>
-          </UInput>
-        </UFormField>
-
-        <UFormField label="估计热量" name="estimatedCalories">
-          <UInput
-            v-model.number="state.estimatedCalories"
-            type="number"
-            placeholder="热量值"
-            :min="0"
-          >
-            <template #trailing>
-              <span class="text-xs">kcal</span>
-            </template>
-          </UInput>
-        </UFormField>
+        <div class="grid grid-cols-2 gap-3">
+          <UFormField label="餐次" name="mealType">
+            <USelect v-model="state.mealType" :items="mealTypeOptions" placeholder="选择餐次">
+              <template #leading>
+                <UIcon
+                  :name="
+                    mealTypeOptions.find((opt) => opt.value === state.mealType)?.icon ||
+                    'mdi:silverware'
+                  "
+                />
+              </template>
+            </USelect>
+          </UFormField>
+          <UFormField label="估计热量" name="estimatedCalories">
+            <UInput
+              v-model.number="state.estimatedCalories"
+              type="number"
+              placeholder="热量值"
+              :min="0"
+              class="w-full"
+            >
+              <template #trailing>
+                <span class="text-xs">kcal</span>
+              </template>
+            </UInput>
+          </UFormField>
+        </div>
 
         <!-- 营养摄入预览 -->
         <UCard v-if="state.foodName && state.estimatedCalories">

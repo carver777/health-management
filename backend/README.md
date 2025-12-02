@@ -17,6 +17,7 @@
 
 - **JWT (JJWT 0.9.1)** - JSON Web Token 身份认证
 - **自定义拦截器** - 请求认证与授权
+- **密码重置** - `POST /auth/password/reset` 验证昵称与邮箱匹配即可重置密码
 
 ### AI 集成
 
@@ -79,8 +80,9 @@ backend/
 │   │   │   │   ├── Exer.java
 │   │   │   │   ├── Sleep.java
 │   │   │   │   ├── User.java
-│   │   │   │   ├── Result.java              # 统一响应格式
-│   │   │   │   └── PageBean.java            # 分页对象
+│   │   │   │   ├── PasswordResetRequest.java # 密码重置请求体
+│   │   │   │   ├── Result.java               # 统一响应格式
+│   │   │   │   └── PageBean.java             # 分页对象
 │   │   │   ├── interceptor/                  # 拦截器
 │   │   │   │   └── LoginCheckInterceptor.java
 │   │   │   ├── config/                       # 配置类
@@ -283,7 +285,7 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### 核心接口
 
-- **用户认证**：`POST /auth/register`, `POST /auth/login`
+- **用户认证**：`POST /auth/register`, `POST /auth/login`, `POST /auth/password/reset`
 - **用户信息**：`GET /user/profile`, `PUT /user/profile`, `GET /user/{userID}`, `PUT /user/{userID}`
 - **文件上传**：`POST /user/avatar`，`GET /user/avatar`
 - **身体数据（Body Metrics）**：

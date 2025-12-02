@@ -23,6 +23,13 @@ export interface RegisterRequest {
   dateOfBirth?: string // 格式 YYYY-MM-DD
 }
 
+export interface PasswordResetRequest {
+  nickname: string
+  email: string
+  newPassword: string
+  confirmPassword: string
+}
+
 // 身体数据相关类型
 export interface BodyData {
   bodyMetricID?: number // API 返回的 ID 字段

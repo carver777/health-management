@@ -1,7 +1,11 @@
 package com.stringtinyst.healthlife.mapper;
 
 import com.stringtinyst.healthlife.pojo.User;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface UsersMapper {
@@ -25,4 +29,11 @@ public interface UsersMapper {
   //    @Update("UPDATE users SET Email = #{email}, PasswordHash = #{passwordHash}, Nickname =
   // #{nickname}, Gender = #{gender}, DateOfBirth = #{dateOfBirth} WHERE UserID = #{userID}")
   int updateUser(User user);
+
+  @Update(
+      "UPDATE users SET PasswordHash = #{passwordHash} WHERE Nickname = #{nickname} AND Email = #{email}")
+  int updatePasswordByNicknameAndEmail(
+      @Param("nickname") String nickname,
+      @Param("email") String email,
+      @Param("passwordHash") String passwordHash);
 }

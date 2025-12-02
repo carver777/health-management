@@ -57,4 +57,21 @@ class UsersMapperTest {
     assertThat(reloaded.getGender()).isEqualTo("other");
     assertThat(reloaded.getPasswordHash()).isEqualTo("salt1$newhash");
   }
+
+  @Test
+  void updatePasswordByNicknameAndEmailShouldAffectMatchingRow() {
+    int rows =
+        usersMapper.updatePasswordByNicknameAndEmail("Alpha", "user1@example.com", "salt$reset");
+
+    assertThat(rows).isEqualTo(1);
+    assertThat(usersMapper.getUser("user-1").getPasswordHash()).isEqualTo("salt$reset");
+  }
+
+  @Test
+  void updatePasswordByNicknameAndEmailShouldIgnoreMismatchedEmail() {
+    int rows =
+        usersMapper.updatePasswordByNicknameAndEmail("Alpha", "wrong@example.com", "salt$reset");
+
+    assertThat(rows).isZero();
+  }
 }
