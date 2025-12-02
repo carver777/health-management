@@ -8,12 +8,6 @@ import org.apache.ibatis.annotations.*;
 @Mapper
 public interface BodyMapper {
 
-  @Select("SELECT count(*) FROM bodymetrics")
-  public Long count();
-
-  @Select("SELECT * FROM bodymetrics LIMIT #{start}, #{pageSize}")
-  public List<Body> page(Integer start, Integer pageSize);
-
   /**
    * 根据用户ID查询身体信息
    *
@@ -25,6 +19,7 @@ public interface BodyMapper {
 
   @Insert(
       "INSERT INTO bodymetrics(UserID, HeightCM, WeightKG, RecordDate) VALUES  (#{userID}, #{heightCM}, #{weightKG}, #{recordDate})")
+  @Options(useGeneratedKeys = true, keyProperty = "bodyMetricID", keyColumn = "BodyMetricID")
   public void insertBody(Body body);
 
   @Select("SELECT * FROM bodymetrics WHERE BodyMetricID = #{bodyMetricID}")
@@ -33,10 +28,6 @@ public interface BodyMapper {
   @Update(
       "UPDATE bodymetrics SET HeightCM = #{heightCM}, WeightKG = #{weightKG}, RecordDate = #{recordDate} WHERE BodyMetricID = #{bodyMetricID}")
   public void updateBody(Body body);
-
-  @Select(
-      "SELECT BodyMetricID FROM bodymetrics WHERE UserID = #{userID} AND HeightCM = #{heightCM} AND WeightKG = #{weightKG} AND RecordDate = #{recordDate}")
-  public int searchbodyID(Body body);
 
   List<Body> list(String userID, LocalDate begin, LocalDate end);
 

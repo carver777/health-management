@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -16,21 +17,8 @@ public interface SleepMapper {
 
   @Insert(
       "INSERT INTO sleepitem(UserID, RecordDate, BedTime, WakeTime) VALUES (#{userID}, #{recordDate}, #{bedTime}, #{wakeTime})")
+  @Options(useGeneratedKeys = true, keyProperty = "sleepItemID", keyColumn = "SleepItemID")
   void insertSleep(Sleep sleep);
-
-  @Select({
-    "<script>",
-    "SELECT SleepItemID FROM sleepitem",
-    "WHERE UserID = #{userID}",
-    "AND RecordDate = #{recordDate}",
-    "<if test='bedTime != null'>AND BedTime = #{bedTime}</if>",
-    "<if test='bedTime == null'>AND BedTime IS NULL</if>",
-    "<if test='wakeTime != null'>AND WakeTime = #{wakeTime}</if>",
-    "<if test='wakeTime == null'>AND WakeTime IS NULL</if>",
-    "ORDER BY SleepItemID DESC LIMIT 1",
-    "</script>"
-  })
-  int searchSleepItemID(Sleep sleep);
 
   @Select("SELECT * FROM sleepitem WHERE SleepItemID = #{sleepItemID}")
   Sleep getBySleepItemID(int sleepItemID);

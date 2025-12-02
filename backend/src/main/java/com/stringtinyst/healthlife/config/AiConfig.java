@@ -19,8 +19,6 @@ import reactor.netty.resources.ConnectionProvider;
 @Configuration
 public class AiConfig {
 
-  private final ChatMemory chatMemory = new InMemoryChatMemory();
-
   @Bean
   public ChatMemory chatMemory() {
     return new InMemoryChatMemory();
@@ -50,8 +48,7 @@ public class AiConfig {
   }
 
   @Bean
-  public ChatClient chatClient(ChatClient.Builder builder) {
-    // 获取所有 Function Bean
+  public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
     String[] functionNames =
         new String[] {
           "queryBodyMetrics",

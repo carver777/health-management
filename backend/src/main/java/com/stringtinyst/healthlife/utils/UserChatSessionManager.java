@@ -2,19 +2,14 @@ package com.stringtinyst.healthlife.utils;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 public class UserChatSessionManager {
 
   private final Map<String, ChatMemory> userSessions = new ConcurrentHashMap<>();
-
-  @Autowired private ChatMemory chatMemory;
 
   public void clearChatMemory(String sessionId) {
     userSessions.remove(sessionId);

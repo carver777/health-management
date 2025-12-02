@@ -47,8 +47,7 @@ public class SleepController {
   public Result addSleep(@Valid @RequestBody Sleep sleep) {
     log.info("Adding sleep record for user: {}", sleep.getUserID());
     sleepService.addSleep(sleep);
-    int sleepItemID = sleepService.searchSleepItemID(sleep);
-    return Result.success(sleepItemID);
+    return Result.success(sleep.getSleepItemID());
   }
 
   @PutMapping("/{sleepItemID}")

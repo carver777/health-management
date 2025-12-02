@@ -15,7 +15,5 @@ public interface BodyService {
 
   void updateBody(Body body);
 
-  int searchbodyID(Body body);
-
   void deleteBody(int bodyMetricID);
 }

@@ -198,11 +198,11 @@ public class HealthDataFunctions {
         body.setRecordDate(parseRequiredDate(request.getRecordDate()));
 
         bodyService.addBody(body);
-        int bodyMetricID = bodyService.searchbodyID(body);
 
         double bmi = request.getWeightKG() / Math.pow(request.getHeightCM() / 100, 2);
         resultCache.evictByPrefix(userCachePrefix("body.query", request.getUserID()));
-        return String.format("成功添加身体数据！记录 ID: %d，BMI: %.2f（正常范围 18.5-23.9）", bodyMetricID, bmi);
+        return String.format(
+            "成功添加身体数据！记录 ID: %d，BMI: %.2f（正常范围 18.5-23.9）", body.getBodyMetricID(), bmi);
       } catch (Exception e) {
         log.error("添加身体数据失败", e);
         return "添加身体数据失败: " + e.getMessage();
@@ -298,14 +298,12 @@ public class HealthDataFunctions {
         sleep.setWakeTime(wakeTime);
 
         sleepService.addSleep(sleep);
-        int sleepItemID = sleepService.searchSleepItemID(sleep);
 
-        long hours = java.time.Duration.between(bedTime, wakeTime).toHours();
         double hoursDecimal = java.time.Duration.between(bedTime, wakeTime).toMinutes() / 60.0;
 
         resultCache.evictByPrefix(userCachePrefix("sleep.query", request.getUserID()));
         return String.format(
-            "成功添加睡眠记录！记录 ID: %d，睡眠时长: %.1f 小时（建议 7-9 小时）", sleepItemID, hoursDecimal);
+            "成功添加睡眠记录！记录 ID: %d，睡眠时长: %.1f 小时（建议 7-9 小时）", sleep.getSleepItemID(), hoursDecimal);
       } catch (Exception e) {
         log.error("添加睡眠记录失败", e);
         return "添加睡眠记录失败: " + e.getMessage();

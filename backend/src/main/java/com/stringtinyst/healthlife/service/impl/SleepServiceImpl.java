@@ -22,11 +22,6 @@ public class SleepServiceImpl implements SleepService {
   }
 
   @Override
-  public int searchSleepItemID(Sleep sleep) {
-    return sleepMapper.searchSleepItemID(sleep);
-  }
-
-  @Override
   public PageBean page(
       Integer page, Integer pageSize, String userID, LocalDate startDate, LocalDate endDate) {
     PageHelper.startPage(page, pageSize);

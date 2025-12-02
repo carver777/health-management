@@ -38,8 +38,7 @@ public class BodyController {
   @PostMapping
   public Result addBody(@Valid @RequestBody Body body) {
     bodyService.addBody(body);
-    int bodyMetricID = bodyService.searchbodyID(body);
-    return Result.success(bodyMetricID);
+    return Result.success(body.getBodyMetricID());
   }
 
   @PutMapping("/{bodyMetricID}")
