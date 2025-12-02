@@ -4,6 +4,3 @@
  */
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', () => self.clients.claim())
-self.addEventListener('fetch', () => {
-  /* Intentionally left blank to avoid intercepting requests. */
-})

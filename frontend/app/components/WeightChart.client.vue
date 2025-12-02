@@ -39,7 +39,7 @@ const averageWeight = computed(() => {
 const init = () => {
   if (!chartRef.value) return
 
-  // 检查容器是否有宽度和高度，若没有则延迟初始化
+  // 检查容器是否有宽度和高度，避免初始化失败
   if (chartRef.value.clientWidth === 0 || chartRef.value.clientHeight === 0) {
     setTimeout(init, 100)
     return
@@ -168,30 +168,28 @@ const updateChart = () => {
   chart.setOption(option)
 }
 
+let resizeObserver: ResizeObserver | null = null
+
 const handleResize = () => {
   chart?.resize()
 }
-
-let resizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
   init()
   window.addEventListener('resize', handleResize)
 
-  // 使用 ResizeObserver 监听容器尺寸变化
+  // 使用 ResizeObserver 监听容器大小变化
   if (chartRef.value) {
-    resizeObserver = new ResizeObserver(() => {
-      handleResize()
-    })
+    resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(chartRef.value)
   }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  if (resizeObserver && chartRef.value) {
-    resizeObserver.unobserve(chartRef.value)
+  if (resizeObserver) {
     resizeObserver.disconnect()
+    resizeObserver = null
   }
   releaseChart()
 })

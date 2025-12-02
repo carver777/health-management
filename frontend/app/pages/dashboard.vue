@@ -39,61 +39,35 @@ const healthGoals = reactive({
 })
 
 const loadWeightData = async () => {
-  if (!import.meta.client) return
+  if (!import.meta.client || !userIDCookie.value) return
+
   try {
-    const userID = userIDCookie.value
-
-    if (!userID) {
-      return
-    }
-
     const days = parseInt(weightTimePeriod.value.replace('d', ''))
     const endDate = new Date()
     const startDate = new Date(endDate)
     startDate.setDate(startDate.getDate() - days + 1)
 
-    const params = {
-      userID,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      page: 1,
-      pageSize: days
-    }
-
     const response = await $fetch<{
       code: number
-      data: {
-        total: number
-        rows: Array<{
-          bodyMetricID: number
-          userID: string
-          recordDate: string
-          weightKG: number
-          heightCM: number
-          bmi?: number
-        }>
-      }
+      data: { rows: Array<{ recordDate: string; weightKG: number }> }
     }>('/api/body-metrics', {
-      params,
-      headers: tokenCookie.value
-        ? {
-            Authorization: `Bearer ${tokenCookie.value}`
-          }
-        : undefined
+      params: {
+        userID: userIDCookie.value,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        page: 1,
+        pageSize: days
+      },
+      headers: tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : undefined
     })
 
-    if (response.code === 1 && response.data?.rows) {
-      weightData.value = response.data.rows.map((item) => {
-        const weight =
-          typeof item.weightKG === 'number' && !Number.isNaN(item.weightKG) ? item.weightKG : 0
-        return {
-          date: item.recordDate,
-          weight
-        }
-      })
-    } else {
-      weightData.value = []
-    }
+    weightData.value =
+      response.code === 1 && response.data?.rows
+        ? response.data.rows.map((item) => ({
+            date: item.recordDate,
+            weight: item.weightKG || 0
+          }))
+        : []
   } catch {
     toast.add({ title: '加载体重数据失败', color: 'error' })
     weightData.value = []
@@ -101,101 +75,61 @@ const loadWeightData = async () => {
 }
 
 const loadCaloriesData = async () => {
-  if (!import.meta.client) return
+  if (!import.meta.client || !userIDCookie.value) return
+
   try {
-    const userID = userIDCookie.value
-
-    if (!userID) {
-      return
-    }
-
     const days = parseInt(caloriesTimePeriod.value.replace('d', ''))
     const endDate = new Date()
     const startDate = new Date(endDate)
     startDate.setDate(startDate.getDate() - days + 1)
 
     const params = {
-      userID,
+      userID: userIDCookie.value,
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
       page: 1,
       pageSize: 1000
     }
 
+    const headers = tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : undefined
+
     const [dietResponse, exerciseResponse] = await Promise.all([
       $fetch<{
         code: number
-        data: {
-          total: number
-          rows: Array<{
-            recordDate: string
-            estimatedCalories: number
-          }>
-        }
-      }>('/api/diet-items', {
-        params,
-        headers: tokenCookie.value
-          ? {
-              Authorization: `Bearer ${tokenCookie.value}`
-            }
-          : undefined
-      }),
+        data: { rows: Array<{ recordDate: string; estimatedCalories: number }> }
+      }>('/api/diet-items', { params, headers }),
       $fetch<{
         code: number
-        data: {
-          total: number
-          rows: Array<{
-            recordDate: string
-            estimatedCaloriesBurned: number
-          }>
-        }
-      }>('/api/exercise-items', {
-        params,
-        headers: tokenCookie.value
-          ? {
-              Authorization: `Bearer ${tokenCookie.value}`
-            }
-          : undefined
-      })
+        data: { rows: Array<{ recordDate: string; estimatedCaloriesBurned: number }> }
+      }>('/api/exercise-items', { params, headers })
     ])
 
     const dateMap = new Map<string, { intake: number; burn: number }>()
 
-    if (dietResponse.code === 1 && dietResponse.data?.rows) {
-      dietResponse.data.rows.forEach((item) => {
-        const date = item.recordDate
-        const existing = dateMap.get(date) || { intake: 0, burn: 0 }
-        existing.intake += item.estimatedCalories || 0
-        dateMap.set(date, existing)
-      })
-    }
+    dietResponse.data?.rows?.forEach((item) => {
+      const existing = dateMap.get(item.recordDate) || { intake: 0, burn: 0 }
+      existing.intake += item.estimatedCalories || 0
+      dateMap.set(item.recordDate, existing)
+    })
 
-    if (exerciseResponse.code === 1 && exerciseResponse.data?.rows) {
-      exerciseResponse.data.rows.forEach((item) => {
-        const date = item.recordDate
-        const existing = dateMap.get(date) || { intake: 0, burn: 0 }
-        existing.burn += item.estimatedCaloriesBurned || 0
-        dateMap.set(date, existing)
-      })
-    }
+    exerciseResponse.data?.rows?.forEach((item) => {
+      const existing = dateMap.get(item.recordDate) || { intake: 0, burn: 0 }
+      existing.burn += item.estimatedCaloriesBurned || 0
+      dateMap.set(item.recordDate, existing)
+    })
 
-    const result: { date: string; intake: number; burn: number; net: number }[] = []
-    for (let i = 0; i < days; i++) {
+    caloriesData.value = Array.from({ length: days }, (_, i) => {
       const date = new Date(startDate)
       date.setDate(date.getDate() + i)
-      const dateStr = date.toISOString().split('T')[0]
-      if (dateStr) {
-        const data = dateMap.get(dateStr) || { intake: 0, burn: 0 }
-        result.push({
-          date: dateStr,
-          intake: data.intake,
-          burn: data.burn,
-          net: data.intake - data.burn
-        })
+      const dateStr = date.toISOString().split('T')[0]!
+      const data = dateMap.get(dateStr) || { intake: 0, burn: 0 }
+      return {
+        date: dateStr,
+        intake: data.intake,
+        burn: data.burn,
+        net: data.intake - data.burn
       }
-    }
-
-    caloriesData.value = result
+    })
   } catch {
     toast.add({ title: '加载卡路里数据失败', color: 'error' })
     caloriesData.value = []
@@ -218,80 +152,42 @@ const loadHealthGoals = () => {
 }
 
 const refreshData = async () => {
-  if (!import.meta.client) return
+  if (!import.meta.client || !userIDCookie.value) return
 
   try {
+    const today = new Date().toISOString().split('T')[0]
+    const headers = tokenCookie.value ? { Authorization: `Bearer ${tokenCookie.value}` } : undefined
     const userID = userIDCookie.value
 
-    if (!userID) {
-      return
-    }
-
-    const today = new Date().toISOString().split('T')[0]
-
-    const headers = tokenCookie.value
-      ? {
-          Authorization: `Bearer ${tokenCookie.value}`
-        }
-      : undefined
-
     const [bodyResponse, dietResponse, exerciseResponse] = await Promise.all([
-      $fetch<{
-        code: number
-        data: {
-          total: number
-          rows: Array<{ weightKG: number }>
-        }
-      }>('/api/body-metrics', {
+      $fetch<{ code: number; data: { rows: Array<{ weightKG: number }> } }>('/api/body-metrics', {
         params: { userID, page: 1, pageSize: 1 },
         headers
       }),
-      $fetch<{
-        code: number
-        data: {
-          total: number
-          rows: Array<{ estimatedCalories: number }>
+      $fetch<{ code: number; data: { rows: Array<{ estimatedCalories: number }> } }>(
+        '/api/diet-items',
+        {
+          params: { userID, startDate: today, endDate: today, page: 1, pageSize: 1000 },
+          headers
         }
-      }>('/api/diet-items', {
-        params: { userID, startDate: today, endDate: today, page: 1, pageSize: 1000 },
-        headers
-      }),
-      $fetch<{
-        code: number
-        data: {
-          total: number
-          rows: Array<{ estimatedCaloriesBurned: number }>
+      ),
+      $fetch<{ code: number; data: { rows: Array<{ estimatedCaloriesBurned: number }> } }>(
+        '/api/exercise-items',
+        {
+          params: { userID, startDate: today, endDate: today, page: 1, pageSize: 1000 },
+          headers
         }
-      }>('/api/exercise-items', {
-        params: { userID, startDate: today, endDate: today, page: 1, pageSize: 1000 },
-        headers
-      })
+      )
     ])
 
-    if (bodyResponse.code === 1 && bodyResponse.data?.rows?.length > 0) {
-      const weight = bodyResponse.data.rows[0]?.weightKG
-      statistics.averageWeight = typeof weight === 'number' && !Number.isNaN(weight) ? weight : 0
-    } else {
-      statistics.averageWeight = 0
-    }
-
-    if (dietResponse.code === 1 && dietResponse.data?.rows) {
-      statistics.totalCaloriesConsumed = dietResponse.data.rows.reduce((sum, item) => {
-        const calories = item.estimatedCalories || 0
-        return sum + (typeof calories === 'number' && !Number.isNaN(calories) ? calories : 0)
-      }, 0)
-    } else {
-      statistics.totalCaloriesConsumed = 0
-    }
-
-    if (exerciseResponse.code === 1 && exerciseResponse.data?.rows) {
-      statistics.totalCaloriesBurned = exerciseResponse.data.rows.reduce((sum, item) => {
-        const burned = item.estimatedCaloriesBurned || 0
-        return sum + (typeof burned === 'number' && !Number.isNaN(burned) ? burned : 0)
-      }, 0)
-    } else {
-      statistics.totalCaloriesBurned = 0
-    }
+    statistics.averageWeight = bodyResponse.data?.rows?.[0]?.weightKG || 0
+    statistics.totalCaloriesConsumed =
+      dietResponse.data?.rows?.reduce((sum, item) => sum + (item.estimatedCalories || 0), 0) || 0
+    statistics.totalCaloriesBurned =
+      exerciseResponse.data?.rows?.reduce(
+        (sum, item) => sum + (item.estimatedCaloriesBurned || 0),
+        0
+      ) || 0
 
     await Promise.all([loadWeightData(), loadCaloriesData()])
   } catch {

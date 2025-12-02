@@ -50,7 +50,12 @@ export default defineNuxtConfig({
 
   routeRules: {
     // 公开页面 - 预渲染
-    '/': { prerender: true },
+    '/': {
+      prerender: true,
+      headers: {
+        'Cache-Control': 'public, max-age=3600, must-revalidate'
+      }
+    },
     '/login': { prerender: true },
 
     // 管理后台页面 - 客户端渲染

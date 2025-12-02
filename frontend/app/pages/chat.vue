@@ -24,20 +24,9 @@ const abortController = ref<AbortController | null>(null)
 
 const CHAT_HISTORY_KEY = 'health_chat_history'
 const toast = useToast()
+const { getAvatarUrl } = useAvatar()
 
-// 获取 token（用于 API 请求）
-const tokenCookie = useCookie<string | null>('token')
-
-// 使用全局共享的头像 URL 状态
-const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
-  if (import.meta.client) {
-    const timestamp = localStorage.getItem('avatarTimestamp')
-    if (timestamp && tokenCookie.value) {
-      return `/api/user/avatar?t=${timestamp}`
-    }
-  }
-  return ''
-})
+const avatarUrl = computed(() => getAvatarUrl())
 
 // 配置 marked
 marked.setOptions({
@@ -332,7 +321,7 @@ onUnmounted(() => {
             <div :class="['shrink-0']">
               <UAvatar
                 v-if="message.role === 'user'"
-                :src="sharedAvatarUrl"
+                v-bind="avatarUrl ? { src: avatarUrl } : {}"
                 alt="用户头像"
                 size="md"
                 icon="heroicons:user"

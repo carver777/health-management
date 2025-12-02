@@ -61,7 +61,7 @@
             >
               <template #leading>
                 <UAvatar
-                  :src="userInfo.avatarUrl || undefined"
+                  v-bind="userInfo.avatarUrl ? { src: userInfo.avatarUrl } : {}"
                   :alt="userInfo.user.nickname"
                   size="xs"
                   icon="heroicons:user"
@@ -109,58 +109,14 @@ import type { NavigationMenuItem, DropdownMenuItem } from '@nuxt/ui'
 const router = useRouter()
 const route = useRoute()
 const { user, logout } = useAuth()
-const tokenCookie = useCookie('token')
+const { getAvatarUrl } = useAvatar()
 
 const isCollapsed = ref(false)
 const isSidebarOpen = ref(false)
 
-// 使用全局共享的头像 URL 状态
-const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
-  if (import.meta.client) {
-    const timestamp = localStorage.getItem('avatarTimestamp')
-    if (timestamp && tokenCookie.value) {
-      return `/api/user/avatar?t=${timestamp}`
-    }
-  }
-  return ''
-})
-
-// 检查头像是否存在
-const checkAvatar = async () => {
-  if (!tokenCookie.value || !import.meta.client) return
-
-  try {
-    // 使用 HEAD 请求检查头像是否存在，避免下载整个文件
-    await $fetch('/api/user/avatar', {
-      method: 'HEAD'
-    })
-
-    // 如果头像存在，设置时间戳，否则清除状态
-    const timestamp = localStorage.getItem('avatarTimestamp') || Date.now().toString()
-    localStorage.setItem('avatarTimestamp', timestamp)
-    sharedAvatarUrl.value = `/api/user/avatar?t=${timestamp}`
-  } catch {
-    localStorage.removeItem('avatarTimestamp')
-    sharedAvatarUrl.value = ''
-  }
-}
-
-// 监听 token 变化，确保头像 URL 被正确设置
-watch(
-  tokenCookie,
-  async (newToken) => {
-    if (newToken) {
-      await checkAvatar()
-    } else {
-      sharedAvatarUrl.value = ''
-    }
-  },
-  { immediate: true }
-)
-
 const userInfo = computed(() => ({
   user: user.value || { nickname: '用户' },
-  avatarUrl: sharedAvatarUrl.value
+  avatarUrl: getAvatarUrl()
 }))
 
 const menuItems = computed<NavigationMenuItem[]>(() => [

@@ -4,9 +4,6 @@
 
 export const useAuth = () => {
   const user = useState<User | null>('user', () => null)
-  const avatarUrl = useState<string | null>('avatarUrl', () => null)
-
-  // 使用 cookie 存储 token（自动在服务端和客户端同步）
   const token = useCookie<string | null>('token', {
     maxAge: 60 * 60 * 24 * 7, // 7 天
     path: '/',
@@ -15,7 +12,6 @@ export const useAuth = () => {
     default: () => null
   })
 
-  // 使用 cookie 存储 userID
   const userID = useCookie<string | null>('userID', {
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
@@ -24,28 +20,17 @@ export const useAuth = () => {
     default: () => null
   })
 
-  // 计算属性
   const isLoggedIn = computed(() => !!token.value)
-
-  // 获取 toast 实例
   const toast = import.meta.client ? useToast() : { add: () => {} }
 
-  // 解析 JWT token 获取 payload（仅客户端）
+  // 解析 JWT token 获取 userID
   const parseJwt = (tokenStr: string) => {
-    if (!import.meta.client) return null
-
     try {
       const base64Url = tokenStr.split('.')[1]
       if (!base64Url) return null
-
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      )
-      return JSON.parse(jsonPayload)
+      const payload = JSON.parse(atob(base64))
+      return payload
     } catch {
       return null
     }
@@ -81,7 +66,6 @@ export const useAuth = () => {
         })
 
         await fetchUserProfile()
-        await checkAndLoadAvatar()
 
         return true
       } else {
@@ -182,72 +166,6 @@ export const useAuth = () => {
     }
   }
 
-  // 获取用户头像
-  const fetchAvatar = async () => {
-    if (!token.value) {
-      return false
-    }
-
-    try {
-      const response = await $fetch<Blob>('/api/user/avatar', {
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        },
-        responseType: 'blob'
-      })
-
-      if (import.meta.client && avatarUrl.value && avatarUrl.value.startsWith('blob:')) {
-        URL.revokeObjectURL(avatarUrl.value)
-      }
-
-      if (import.meta.client && response && response.size > 0) {
-        avatarUrl.value = URL.createObjectURL(response)
-        return true
-      }
-
-      return false
-    } catch {
-      // 清理旧的头像 URL
-      if (import.meta.client && avatarUrl.value && avatarUrl.value.startsWith('blob:')) {
-        URL.revokeObjectURL(avatarUrl.value)
-      }
-      avatarUrl.value = null
-      return false
-    }
-  }
-
-  // 更新头像
-  const updateAvatar = async () => {
-    return await fetchAvatar()
-  }
-
-  // 检查并加载头像（用于登录后初始化）
-  const checkAndLoadAvatar = async () => {
-    if (!token.value || !import.meta.client) return
-
-    try {
-      await $fetch('/api/user/avatar', {
-        method: 'HEAD',
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        }
-      })
-
-      // 头像存在，设置时间戳，否则清除
-      const timestamp = Date.now().toString()
-      localStorage.setItem('avatarTimestamp', timestamp)
-
-      // 更新共享状态
-      const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
-      sharedAvatarUrl.value = `/api/user/avatar?t=${timestamp}`
-    } catch {
-      localStorage.removeItem('avatarTimestamp')
-
-      const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
-      sharedAvatarUrl.value = ''
-    }
-  }
-
   // 更新用户信息
   const updateProfile = async (profileData: Partial<User>) => {
     try {
@@ -285,21 +203,16 @@ export const useAuth = () => {
     token.value = null
     userID.value = null
 
-    // 清理头像 blob URL
-    if (import.meta.client && avatarUrl.value && avatarUrl.value.startsWith('blob:')) {
-      URL.revokeObjectURL(avatarUrl.value)
-    }
-    avatarUrl.value = null
-
-    // 清除 localStorage 中的所有缓存
     if (import.meta.client) {
-      localStorage.removeItem('avatarTimestamp')
       localStorage.removeItem('user_cache')
       localStorage.removeItem('user_cache_timestamp')
-    }
 
-    const sharedAvatarUrl = useState<string>('sharedAvatarUrl')
-    sharedAvatarUrl.value = ''
+      // 重置头像状态
+      const avatarExists = useState<boolean | null>('avatar_exists')
+      const avatarTimestamp = useState<number>('avatar_timestamp')
+      avatarExists.value = null
+      avatarTimestamp.value = Date.now()
+    }
 
     if (!silent) {
       toast.add({
@@ -309,29 +222,14 @@ export const useAuth = () => {
     }
   }
 
-  // 初始化
-  const init = async () => {
-    if (token.value) {
-      await fetchUserProfile()
-    }
-  }
-
   return {
-    // 状态
     user: readonly(user),
     token: readonly(token),
-    avatarUrl: readonly(avatarUrl),
     isLoggedIn,
-
-    // 方法
     login,
     register,
     fetchUserProfile,
-    fetchAvatar,
-    updateAvatar,
-    checkAndLoadAvatar,
     updateProfile,
-    logout,
-    init
+    logout
   }
 }

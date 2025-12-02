@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/user")
 public class UploadController {
 
+  private static final String[] SUPPORTED_AVATAR_EXTENSIONS = {".jpg", ".png", ".gif"};
+
   @Autowired private JwtUtils jwtUtils;
 
   @PostMapping("/avatar")
@@ -37,12 +39,7 @@ public class UploadController {
     }
 
     try {
-      String uploadDir = System.getenv("AVATAR_UPLOAD_DIR");
-      if (uploadDir == null || uploadDir.isEmpty()) {
-        uploadDir = "src/main/resources/static/avatars/";
-      }
-
-      Path uploadPath = Paths.get(uploadDir);
+      Path uploadPath = resolveUploadDir();
 
       if (!Files.exists(uploadPath)) {
         Files.createDirectories(uploadPath);
@@ -54,8 +51,7 @@ public class UploadController {
         fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
       }
 
-      String[] extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"};
-      for (String ext : extensions) {
+      for (String ext : SUPPORTED_AVATAR_EXTENSIONS) {
         Path oldFile = uploadPath.resolve(userId + ext);
         if (Files.exists(oldFile)) {
           Files.delete(oldFile);
@@ -79,42 +75,14 @@ public class UploadController {
   public ResponseEntity<Resource> getAvatar(
       HttpServletRequest request,
       @RequestHeader(value = "token", required = false) String tokenHeader) {
-    String token = tokenHeader;
-    if (!StringUtils.hasLength(token)) {
-      Cookie[] cookies = request.getCookies();
-      if (cookies != null) {
-        for (Cookie cookie : cookies) {
-          if ("token".equals(cookie.getName())) {
-            token = cookie.getValue();
-            break;
-          }
-        }
-      }
-    }
-
+    String token = resolveToken(request, tokenHeader);
     if (!StringUtils.hasLength(token)) {
       log.warn("获取头像失败: 未提供 token");
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     String userId = extractUserIdFromToken(token);
-
-    String uploadDir = System.getenv("AVATAR_UPLOAD_DIR");
-    if (uploadDir == null || uploadDir.isEmpty()) {
-      uploadDir = "src/main/resources/static/avatars/";
-    }
-    Path uploadPath = Paths.get(uploadDir);
-
-    String[] extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"};
-    Path foundFile = null;
-
-    for (String ext : extensions) {
-      Path testFile = uploadPath.resolve(userId + ext);
-      if (Files.exists(testFile)) {
-        foundFile = testFile;
-        break;
-      }
-    }
+    Path foundFile = findAvatarFile(userId);
 
     if (foundFile == null) {
       log.warn("用户头像不存在: userId={}", userId);
@@ -135,6 +103,31 @@ public class UploadController {
     }
   }
 
+  @RequestMapping(value = "/avatar", method = RequestMethod.HEAD)
+  public ResponseEntity<Void> checkAvatar(
+      HttpServletRequest request,
+      @RequestHeader(value = "token", required = false) String tokenHeader) {
+    String token = resolveToken(request, tokenHeader);
+    if (!StringUtils.hasLength(token)) {
+      log.warn("探测头像失败: 未提供 token");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    String userId = extractUserIdFromToken(token);
+    Path avatarFile = findAvatarFile(userId);
+
+    if (avatarFile == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    if (!Files.isReadable(avatarFile)) {
+      log.error("头像文件不可读: {}", avatarFile);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+
+    return ResponseEntity.ok().build();
+  }
+
   private String extractUserIdFromToken(String token) {
     try {
       Map<String, Object> claims = jwtUtils.parseJWT(token);
@@ -146,5 +139,42 @@ public class UploadController {
     } catch (Exception e) {
       throw new IllegalArgumentException("无效的 token 或 token 中无 userId");
     }
+  }
+
+  private Path resolveUploadDir() {
+    String uploadDir = System.getenv("AVATAR_UPLOAD_DIR");
+    if (!StringUtils.hasLength(uploadDir)) {
+      uploadDir = "src/main/resources/static/avatars/";
+    }
+    return Paths.get(uploadDir);
+  }
+
+  private Path findAvatarFile(String userId) {
+    Path uploadPath = resolveUploadDir();
+    for (String ext : SUPPORTED_AVATAR_EXTENSIONS) {
+      Path candidate = uploadPath.resolve(userId + ext);
+      if (Files.exists(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  private String resolveToken(HttpServletRequest request, String tokenHeader) {
+    String token = tokenHeader;
+    if (StringUtils.hasLength(token)) {
+      return token;
+    }
+
+    Cookie[] cookies = request.getCookies();
+    if (cookies != null) {
+      for (Cookie cookie : cookies) {
+        if ("token".equals(cookie.getName())) {
+          return cookie.getValue();
+        }
+      }
+    }
+
+    return null;
   }
 }

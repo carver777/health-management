@@ -8,6 +8,7 @@ definePageMeta({
 
 const toast = useToast()
 const showAIChatPalette = ref(false)
+const { getAvatarUrl, markAvatarUpdated } = useAvatar()
 
 // 获取 token（用于 API 请求）
 const tokenCookie = useCookie<string | null>('token')
@@ -31,15 +32,14 @@ const userInfo = reactive({
 // 头像文件
 const avatarFile = ref<File | null>(null)
 
-// 使用全局共享的头像 URL 状态
-const sharedAvatarUrl = useState<string>('sharedAvatarUrl', () => {
-  if (import.meta.client) {
-    const timestamp = localStorage.getItem('avatarTimestamp')
-    if (timestamp && tokenCookie.value) {
-      return `/api/user/avatar?t=${timestamp}`
-    }
+// 头像 URL
+const avatarUrl = computed(() => {
+  // 如果选择了新文件，显示预览
+  if (avatarFile.value) {
+    return URL.createObjectURL(avatarFile.value)
   }
-  return ''
+  // 使用 useAvatar 获取 URL，避免 404 请求
+  return getAvatarUrl()
 })
 
 // 健康统计
@@ -82,16 +82,6 @@ const goalsForm = reactive({
   dailyCaloriesBurn: null as number | null
 })
 
-// 创建头像 URL
-const avatarUrl = computed(() => {
-  // 如果选择了新文件，显示预览
-  if (avatarFile.value) {
-    return URL.createObjectURL(avatarFile.value)
-  }
-  // 否则使用共享的头像 URL
-  return sharedAvatarUrl.value
-})
-
 // 格式化日期
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -122,13 +112,8 @@ const uploadAvatar = async () => {
     })
 
     if (response.code === 1) {
-      // 上传成功后更新时间戳并更新共享状态
-      const newTimestamp = Date.now().toString()
-      if (import.meta.client) {
-        localStorage.setItem('avatarTimestamp', newTimestamp)
-      }
-
-      sharedAvatarUrl.value = `/api/user/avatar?t=${newTimestamp}`
+      // 标记头像已更新
+      markAvatarUpdated()
       avatarFile.value = null
 
       toast.add({
@@ -529,7 +514,7 @@ onMounted(() => {
               <!-- 头像上传区域 -->
               <div class="flex flex-col items-center gap-3 md:w-1/3">
                 <UAvatar
-                  :src="avatarUrl"
+                  v-bind="avatarUrl ? { src: avatarUrl } : {}"
                   :alt="userInfo.nickname"
                   size="3xl"
                   icon="heroicons:user"

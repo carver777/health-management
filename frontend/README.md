@@ -117,6 +117,7 @@ health-management/
 │   │   └── QuickSleepDialog.vue      # 快速记录睡眠
 │   ├── composables/
 │   │   ├── useAuth.ts                # 认证状态管理
+│   │   ├── useAvatar.ts              # 头像状态检测与 URL 缓存
 │   │   └── useECharts.ts             # ECharts 配置
 │   ├── layouts/
 │   │   ├── blank.vue                 # 空白布局（登录页）
