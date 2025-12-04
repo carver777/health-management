@@ -2,43 +2,27 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { DateValue } from '@internationalized/date'
 
-// TableColumn 类型别名
-type TableColumn<T> = ColumnDef<T>
-
-interface PageInfo {
-  current: number
-  size: number
-  total: number
-}
-
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
 
 const toast = useToast()
-const showAIChatPalette = ref(false)
-
 const dietList = ref<DietRecord[]>([])
 const todayDietList = ref<DietRecord[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const editingItem = ref<DietRecord | null>(null)
 
-const pageInfo = reactive<PageInfo>({
+const pageInfo = reactive({
   current: 1,
   size: 10,
   total: 0
 })
 
-// 筛选器状态
-const filterMealType = ref<{ label: string; value: string; icon: string } | undefined>(undefined)
+const filterMealType = ref<string>('all')
+const dateRange = shallowRef<{ start: DateValue; end: DateValue } | null>(null)
 
-// 日期配置
-const startDateCalendar = shallowRef<DateValue | null>(null)
-const endDateCalendar = shallowRef<DateValue | null>(null)
-
-// 用餐类型选项
 const mealTypeOptions = [
   { label: '全部', value: 'all', icon: 'mdi:silverware' },
   { label: '早餐', value: '早餐', icon: 'mdi:bread-slice' },
@@ -47,44 +31,28 @@ const mealTypeOptions = [
   { label: '加餐', value: '加餐', icon: 'mdi:food-apple' }
 ]
 
-// 今日统计计算属性
-const todayCalories = computed(() => {
-  return todayDietList.value.reduce((sum, diet) => sum + (diet.estimatedCalories || 0), 0)
+const todayStats = computed(() => {
+  const meals = {
+    breakfast: todayDietList.value.filter((d) => d.mealType === '早餐').length,
+    lunch: todayDietList.value.filter((d) => d.mealType === '午餐').length,
+    dinner: todayDietList.value.filter((d) => d.mealType === '晚餐').length,
+    snack: todayDietList.value.filter((d) => d.mealType === '加餐').length
+  }
+  return {
+    calories: todayDietList.value.reduce((sum, d) => sum + (d.estimatedCalories || 0), 0),
+    ...meals,
+    total: meals.breakfast + meals.lunch + meals.dinner
+  }
 })
 
-const todayBreakfast = computed(() => {
-  return todayDietList.value.filter((diet) => diet.mealType === '早餐').length
-})
-
-const todayLunch = computed(() => {
-  return todayDietList.value.filter((diet) => diet.mealType === '午餐').length
-})
-
-const todayDinner = computed(() => {
-  return todayDietList.value.filter((diet) => diet.mealType === '晚餐').length
-})
-
-const todaySnack = computed(() => {
-  return todayDietList.value.filter((diet) => diet.mealType === '加餐').length
-})
-
-const todayMealsTotal = computed(() => {
-  return todayBreakfast.value + todayLunch.value + todayDinner.value
-})
-
-// 健康目标
 const healthGoals = reactive({ dailyCaloriesIntake: null as number | null })
 
 const loadHealthGoals = () => {
   if (!import.meta.client) return
-  const savedGoals = localStorage.getItem('healthGoals')
-  if (savedGoals) {
-    const parsed = JSON.parse(savedGoals)
-    healthGoals.dailyCaloriesIntake = parsed.dailyCaloriesIntake
-  }
+  const saved = localStorage.getItem('healthGoals')
+  if (saved) healthGoals.dailyCaloriesIntake = JSON.parse(saved).dailyCaloriesIntake
 }
 
-// 热量等级计算
 const getCalorieLevel = (
   calories: number
 ): { text: string; color: 'success' | 'warning' | 'error' } => {
@@ -93,8 +61,7 @@ const getCalorieLevel = (
   return { text: '高热量', color: 'error' }
 }
 
-// 表格列定义
-const columns: TableColumn<DietRecord>[] = [
+const columns: ColumnDef<DietRecord>[] = [
   {
     accessorKey: 'recordDate',
     header: '记录日期',
@@ -165,10 +132,6 @@ const columns: TableColumn<DietRecord>[] = [
   }
 ]
 
-const formatDate = (date: DateValue | null, placeholder: string): string => {
-  return date ? dateValueToString(date) : placeholder
-}
-
 // 加载今日数据（不受分页影响）
 const loadTodayData = async () => {
   try {
@@ -207,7 +170,6 @@ const loadTodayData = async () => {
   }
 }
 
-// 加载列表数据
 const loadData = async () => {
   loading.value = true
   try {
@@ -225,31 +187,33 @@ const loadData = async () => {
     }
 
     // 处理日期筛选
-    if (startDateCalendar.value || endDateCalendar.value) {
-      const startStr = startDateCalendar.value ? dateValueToString(startDateCalendar.value) : null
-      const endStr = endDateCalendar.value
-        ? dateValueToString(endDateCalendar.value)
-        : dateValueToString(getTodayDateValue())
-
-      // 如果只选了开始日期，使用默认结束日期（今天）
-      if (startStr && endStr) {
-        // 验证日期范围：开始日期不能晚于结束日期
-        if (startStr > endStr) {
-          toast.add({
-            title: '日期范围错误',
-            description: '开始日期不能晚于结束日期',
-            color: 'error'
-          })
-          loading.value = false
-          return
-        }
-        params.startDate = startStr
-        params.endDate = endStr
+    if (dateRange.value && (dateRange.value.start || dateRange.value.end)) {
+      if (!dateRange.value.start || !dateRange.value.end) {
+        toast.add({
+          title: '日期范围不完整',
+          description: '请填写完整的日期范围',
+          color: 'error'
+        })
+        loading.value = false
+        return
       }
+      const startStr = dateValueToString(dateRange.value.start)
+      const endStr = dateValueToString(dateRange.value.end)
+      if (startStr > endStr) {
+        toast.add({
+          title: '日期范围错误',
+          description: '开始日期不能晚于结束日期',
+          color: 'error'
+        })
+        loading.value = false
+        return
+      }
+      params.startDate = startStr
+      params.endDate = endStr
     }
 
-    if (filterMealType.value && filterMealType.value.value !== 'all') {
-      params.mealType = filterMealType.value.value
+    if (filterMealType.value && filterMealType.value !== 'all') {
+      params.mealType = filterMealType.value
     }
 
     const response = await $fetch<{
@@ -278,19 +242,16 @@ const loadData = async () => {
   }
 }
 
-// 打开添加对话框
 const openAddDialog = () => {
   editingItem.value = null
   showDialog.value = true
 }
 
-// 打开编辑对话框
 const openEditDialog = (item: DietRecord) => {
   editingItem.value = item
   showDialog.value = true
 }
 
-// 对话框成功回调
 const handleDialogSuccess = () => {
   loadData()
   loadTodayData()
@@ -323,11 +284,9 @@ const deleteItem = async (item: DietRecord) => {
   }
 }
 
-// 重置筛选器
 const resetFilter = () => {
-  startDateCalendar.value = null
-  endDateCalendar.value = null
-  filterMealType.value = undefined
+  dateRange.value = null
+  filterMealType.value = 'all'
   pageInfo.current = 1
   loadData()
 }
@@ -337,7 +296,6 @@ const handlePageChange = (page: number) => {
   loadData()
 }
 
-// 生命周期
 onMounted(() => {
   loadHealthGoals()
   loadData()
@@ -364,7 +322,7 @@ onMounted(() => {
               <UIcon name="mdi:fire" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todayCalories }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.calories }}</div>
               <div class="text-sm">今日摄入卡路里（kcal）</div>
               <div v-if="healthGoals.dailyCaloriesIntake" class="text-xs">
                 目标: {{ healthGoals.dailyCaloriesIntake }} kcal
@@ -381,10 +339,11 @@ onMounted(() => {
               <UIcon name="mdi:silverware-fork-knife" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todayMealsTotal }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.total }}</div>
               <div class="text-sm">今日三餐</div>
               <div class="text-xs">
-                早餐 {{ todayBreakfast }} | 午餐 {{ todayLunch }} | 晚餐 {{ todayDinner }}
+                早餐 {{ todayStats.breakfast }} | 午餐 {{ todayStats.lunch }} | 晚餐
+                {{ todayStats.dinner }}
               </div>
             </div>
           </div>
@@ -397,7 +356,7 @@ onMounted(() => {
               <UIcon name="mdi:food-variant" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todaySnack }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.snack }}</div>
               <div class="text-sm">今日加餐</div>
             </div>
           </div>
@@ -416,30 +375,17 @@ onMounted(() => {
         </template>
 
         <div class="flex flex-wrap gap-4">
-          <!-- 开始日期 -->
+          <!-- 日期范围 -->
           <div class="min-w-[200px] flex-1">
-            <label for="diet-filter-start-date" class="mb-2 block text-sm font-medium"
-              >开始日期</label
+            <label for="diet-filter-date-range" class="mb-2 block text-sm font-medium"
+              >日期范围</label
             >
-            <DatePicker
-              id="diet-filter-start-date"
-              v-model="startDateCalendar"
-              block
-              :placeholder="formatDate(startDateCalendar, '选择开始日期')"
-              @update:model-value="loadData"
-            />
-          </div>
-
-          <!-- 结束日期 -->
-          <div class="min-w-[200px] flex-1">
-            <label for="diet-filter-end-date" class="mb-2 block text-sm font-medium"
-              >结束日期</label
-            >
-            <DatePicker
-              id="diet-filter-end-date"
-              v-model="endDateCalendar"
-              block
-              :placeholder="formatDate(endDateCalendar, '选择结束日期')"
+            <UInputDate
+              id="diet-filter-date-range"
+              v-model="dateRange"
+              range
+              icon="heroicons:calendar"
+              class="w-full"
               @update:model-value="loadData"
             />
           </div>
@@ -449,19 +395,24 @@ onMounted(() => {
             <label for="diet-filter-meal-type" class="mb-2 block text-sm font-medium"
               >用餐类型</label
             >
-            <USelectMenu
+            <USelect
               id="diet-filter-meal-type"
               v-model="filterMealType"
               :items="mealTypeOptions"
-              placeholder="全部"
+              value-key="value"
               class="w-full"
-              @change="loadData"
+              @update:model-value="loadData"
             >
-              <template #leading="{ modelValue }">
-                <UIcon v-if="modelValue" :name="modelValue.icon" class="h-5 w-5" />
-                <UIcon v-else name="mdi:silverware" class="h-5 w-5 text-gray-400" />
+              <template #leading>
+                <UIcon
+                  :name="
+                    mealTypeOptions.find((opt) => opt.value === filterMealType)?.icon ||
+                    'mdi:silverware'
+                  "
+                  class="h-5 w-5"
+                />
               </template>
-            </USelectMenu>
+            </USelect>
           </div>
 
           <!-- 重置按钮 -->
@@ -518,9 +469,6 @@ onMounted(() => {
         :edit-item="editingItem"
         @success="handleDialogSuccess"
       />
-
-      <!-- AI 聊天面板 -->
-      <AIChatPalette v-model:open="showAIChatPalette" />
     </UPageBody>
   </UPage>
 </template>

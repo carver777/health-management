@@ -1,3 +1,92 @@
+<script setup lang="ts">
+interface Props {
+  error: {
+    statusCode?: number
+    message?: string
+    stack?: string
+  }
+}
+
+const props = defineProps<Props>()
+
+const quickLinks = [
+  {
+    to: '/dashboard',
+    icon: 'mdi:view-dashboard',
+    label: '数据概览'
+  },
+  {
+    to: '/body-data',
+    icon: 'mdi:clipboard-text',
+    label: '身体数据'
+  },
+  {
+    to: '/diet',
+    icon: 'mdi:food-apple',
+    label: '饮食管理'
+  },
+  {
+    to: '/exercise',
+    icon: 'mdi:run-fast',
+    label: '运动管理'
+  },
+  {
+    to: '/sleep',
+    icon: 'mdi:sleep',
+    label: '睡眠管理'
+  },
+  {
+    to: '/chat',
+    icon: 'heroicons:chat-bubble-left-right',
+    label: '健康咨询'
+  }
+]
+
+const getErrorTitle = () => {
+  const statusCode = props.error.statusCode
+  switch (statusCode) {
+    case 404:
+      return '页面走丢了'
+    case 403:
+      return '访问被拒绝'
+    case 500:
+      return '服务器错误'
+    default:
+      return '出错了'
+  }
+}
+
+const getErrorDescription = () => {
+  const statusCode = props.error.statusCode
+  switch (statusCode) {
+    case 404:
+      return '抱歉，您访问的页面不存在或已被移动到其他位置'
+    case 403:
+      return '您没有权限访问此页面，请先登录'
+    case 500:
+      return '服务器遇到了一些问题，我们正在努力修复'
+    default:
+      return props.error.message || '发生了一个未知错误'
+  }
+}
+
+const handleError = () => {
+  clearError({ redirect: '/dashboard' })
+}
+
+const goBack = () => {
+  if (import.meta.client) {
+    if (window.history.length > 1) {
+      window.history.back()
+    } else {
+      clearError({ redirect: '/dashboard' })
+    }
+  } else {
+    clearError({ redirect: '/dashboard' })
+  }
+}
+</script>
+
 <template>
   <div class="flex min-h-screen items-center justify-center bg-gray-50 p-4">
     <div class="w-full max-w-2xl text-center">
@@ -47,97 +136,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-interface Props {
-  error: {
-    statusCode?: number
-    message?: string
-    stack?: string
-  }
-}
-
-const props = defineProps<Props>()
-
-// 快速导航链接
-const quickLinks = [
-  {
-    to: '/dashboard',
-    icon: 'mdi:view-dashboard',
-    label: '数据概览'
-  },
-  {
-    to: '/body-data',
-    icon: 'mdi:clipboard-text',
-    label: '身体数据'
-  },
-  {
-    to: '/diet',
-    icon: 'mdi:food-apple',
-    label: '饮食管理'
-  },
-  {
-    to: '/exercise',
-    icon: 'mdi:run-fast',
-    label: '运动管理'
-  },
-  {
-    to: '/sleep',
-    icon: 'mdi:sleep',
-    label: '睡眠管理'
-  },
-  {
-    to: '/chat',
-    icon: 'heroicons:chat-bubble-left-right',
-    label: '健康咨询'
-  }
-]
-
-// 获取错误标题
-const getErrorTitle = () => {
-  const statusCode = props.error.statusCode
-  switch (statusCode) {
-    case 404:
-      return '页面走丢了'
-    case 403:
-      return '访问被拒绝'
-    case 500:
-      return '服务器错误'
-    default:
-      return '出错了'
-  }
-}
-
-// 获取错误描述
-const getErrorDescription = () => {
-  const statusCode = props.error.statusCode
-  switch (statusCode) {
-    case 404:
-      return '抱歉，您访问的页面不存在或已被移动到其他位置'
-    case 403:
-      return '您没有权限访问此页面，请先登录'
-    case 500:
-      return '服务器遇到了一些问题，我们正在努力修复'
-    default:
-      return props.error.message || '发生了一个未知错误'
-  }
-}
-
-// 清除错误并返回首页
-const handleError = () => {
-  clearError({ redirect: '/dashboard' })
-}
-
-// 返回上一页
-const goBack = () => {
-  if (import.meta.client) {
-    if (window.history.length > 1) {
-      window.history.back()
-    } else {
-      clearError({ redirect: '/dashboard' })
-    }
-  } else {
-    clearError({ redirect: '/dashboard' })
-  }
-}
-</script>

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date'
+import { CalendarDate } from '@internationalized/date'
 import type { FormSubmitEvent } from '#ui/types'
 import { z } from 'zod'
 
 definePageMeta({ layout: 'blank' })
 
 const { login, register, resetPassword: resetPasswordApi } = useAuth()
-const isRegister = ref(useRoute().query.mode === 'register')
-const isReset = ref(false)
+const route = useRoute()
+const isRegister = ref(route.query.mode === 'register')
+const isReset = ref(route.query.mode === 'reset')
 
 const passwordSchema = z.string().min(6, '密码长度至少 6 个字符')
 
@@ -71,29 +73,24 @@ const showPassword = reactive({
 })
 
 const resetForm = () => {
-  Object.assign(loginState, { email: '', password: '' })
-  Object.assign(registerState, {
-    nickname: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    gender: '男'
-  })
-  Object.assign(resetState, {
-    nickname: '',
-    email: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
+  loginState.email = ''
+  loginState.password = ''
+  registerState.nickname = ''
+  registerState.email = ''
+  registerState.password = ''
+  registerState.confirmPassword = ''
+  registerState.gender = '男'
+  resetState.nickname = ''
+  resetState.email = ''
+  resetState.newPassword = ''
+  resetState.confirmPassword = ''
   calendarValue.value = getTodayDateValue()
   dateOfBirthError.value = ''
-  Object.assign(showPassword, {
-    login: false,
-    register: false,
-    confirm: false,
-    reset: false,
-    resetConfirm: false
-  })
+  showPassword.login = false
+  showPassword.register = false
+  showPassword.confirm = false
+  showPassword.reset = false
+  showPassword.resetConfirm = false
 }
 
 async function onLoginSubmit(event: FormSubmitEvent<LoginSchema>) {
@@ -116,22 +113,13 @@ async function onRegisterSubmit(event: FormSubmitEvent<RegisterSchema>) {
   })
 
   if (success) {
-    isRegister.value = false
-    resetForm()
+    switchToLogin()
   }
 }
 
 async function onResetSubmit(event: FormSubmitEvent<ResetSchema>) {
-  const success = await resetPasswordApi({
-    nickname: event.data.nickname.trim(),
-    email: event.data.email,
-    newPassword: event.data.newPassword,
-    confirmPassword: event.data.confirmPassword
-  })
-
-  if (success) {
-    switchToLogin()
-  }
+  const success = await resetPasswordApi(event.data)
+  if (success) switchToLogin()
 }
 
 function switchToRegister() {
@@ -323,8 +311,8 @@ function switchToReset() {
             block
             size="lg"
             placeholder="请选择出生日期"
-            :min-value="createCalendarDate(1900, 1, 1)"
-            :max-value="createCalendarDate(2050, 12, 31)"
+            :min-value="new CalendarDate(1900, 1, 1)"
+            :max-value="new CalendarDate(2050, 12, 31)"
           />
         </UFormField>
 
@@ -412,9 +400,7 @@ function switchToReset() {
           </UInput>
         </UFormField>
 
-        <p class="text-xs text-gray-500">
-          请输入注册时设置的昵称与邮箱，系统将验证两者匹配后允许重置密码
-        </p>
+        <p class="text-xs text-gray-500">请输入注册时设置的昵称与邮箱，若两者匹配则允许重置密码</p>
 
         <UButton type="submit" block size="lg" color="primary" class="mt-2"> 重置密码 </UButton>
 

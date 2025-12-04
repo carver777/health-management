@@ -9,86 +9,96 @@ interface AsyncQueue<T> {
   pushError: (err: unknown) => void
 }
 
-const createAsyncQueue = <T>(): AsyncQueue<T> => {
-  const buffer: Array<T | null> = []
-  let pendingResolve: ((value: T | null) => void) | null = null
-  let pendingReject: ((reason?: unknown) => void) | null = null
-  let storedError: unknown = null
-  let finished = false
+class AsyncQueueImpl<T> {
+  private buffer: Array<T | null> = []
+  private pendingResolve: ((value: T | null) => void) | null = null
+  private pendingReject: ((reason?: unknown) => void) | null = null
+  private storedError: unknown = null
+  private finished = false
 
-  const nextValue = () => {
-    if (buffer.length > 0) {
-      return Promise.resolve(buffer.shift()!)
+  private resolvePending(value: T | null) {
+    if (this.pendingResolve) {
+      this.pendingResolve(value)
+      this.pendingResolve = null
+      this.pendingReject = null
     }
-    if (storedError) {
-      const err = storedError
-      storedError = null
+  }
+
+  private rejectPending(err: unknown) {
+    if (this.pendingReject) {
+      this.pendingReject(err)
+      this.pendingResolve = null
+      this.pendingReject = null
+    }
+  }
+
+  private nextValue(): Promise<T | null> {
+    if (this.buffer.length > 0) {
+      return Promise.resolve(this.buffer.shift()!)
+    }
+    if (this.storedError) {
+      const err = this.storedError
+      this.storedError = null
       return Promise.reject(err)
     }
-    if (finished) {
+    if (this.finished) {
       return Promise.resolve(null)
     }
     return new Promise<T | null>((resolve, reject) => {
-      pendingResolve = resolve
-      pendingReject = reject
+      this.pendingResolve = resolve
+      this.pendingReject = reject
     })
   }
 
-  const pushValue = (value: T) => {
-    if (finished) {
-      return
-    }
-    if (pendingResolve) {
-      const resolver = pendingResolve
-      pendingResolve = null
-      pendingReject = null
-      resolver(value)
+  pushValue(value: T) {
+    if (this.finished) return
+
+    if (this.pendingResolve) {
+      this.resolvePending(value)
     } else {
-      buffer.push(value)
+      this.buffer.push(value)
     }
   }
 
-  const close = () => {
-    if (finished) {
-      return
-    }
-    finished = true
-    if (pendingResolve) {
-      const resolver = pendingResolve
-      pendingResolve = null
-      pendingReject = null
-      resolver(null)
+  close() {
+    if (this.finished) return
+
+    this.finished = true
+    if (this.pendingResolve) {
+      this.resolvePending(null)
     } else {
-      buffer.push(null)
+      this.buffer.push(null)
     }
   }
 
-  const pushError = (err: unknown) => {
-    if (finished) {
-      return
-    }
-    finished = true
-    if (pendingReject) {
-      const rejecter = pendingReject
-      pendingResolve = null
-      pendingReject = null
-      rejecter(err)
+  pushError(err: unknown) {
+    if (this.finished) return
+
+    this.finished = true
+    if (this.pendingReject) {
+      this.rejectPending(err)
     } else {
-      storedError = err
+      this.storedError = err
     }
   }
 
-  const generator = (async function* () {
+  async *generate() {
     while (true) {
-      const value = await nextValue()
-      if (value === null) {
-        break
-      }
+      const value = await this.nextValue()
+      if (value === null) break
       yield value
     }
-  })()
+  }
+}
 
-  return { generator, pushValue, close, pushError }
+const createAsyncQueue = <T>(): AsyncQueue<T> => {
+  const queue = new AsyncQueueImpl<T>()
+  return {
+    generator: queue.generate(),
+    pushValue: (value: T) => queue.pushValue(value),
+    close: () => queue.close(),
+    pushError: (err: unknown) => queue.pushError(err)
+  }
 }
 
 export interface SSEPostOptions {
@@ -135,11 +145,69 @@ export async function ssePost<T>(path: string, options: SSEPostOptions) {
         const reader = body.getReader()
         let buffer = ''
 
+        // 跳过空白字符
+        const skipWhitespace = (str: string, start: number): number => {
+          while (start < str.length && /\s/.test(str[start] ?? '')) {
+            start++
+          }
+          return start
+        }
+
+        // 跳过 SSE data: 前缀
+        const skipDataPrefix = (str: string, start: number): number => {
+          if (!str.slice(start).startsWith('data:')) return start
+
+          start += 5
+          while (start < str.length && str[start] === ' ') {
+            start++
+          }
+          return start
+        }
+
+        // 查找完整的 JSON 对象
+        const findCompleteJson = (str: string, start: number): number => {
+          let braceCount = 0
+          let inString = false
+          let escapeNext = false
+
+          for (let i = start; i < str.length; i++) {
+            const char = str[i]
+
+            if (escapeNext) {
+              escapeNext = false
+              continue
+            }
+
+            if (char === '\\' && inString) {
+              escapeNext = true
+              continue
+            }
+
+            if (char === '"') {
+              inString = !inString
+              continue
+            }
+
+            if (!inString) {
+              if (char === '{') {
+                braceCount++
+              } else if (char === '}') {
+                braceCount--
+                if (braceCount === 0) {
+                  return i
+                }
+              }
+            }
+          }
+
+          return -1
+        }
+
         /**
          * 解析连续的 JSON 对象流
          * 支持格式: {"content":"a"}{"content":"b"} 或标准 SSE data: 格式
          */
-        const processBuffer = async (flushAll = false) => {
+        const processBuffer = async (flushAll = false): Promise<boolean> => {
           // 处理标准 SSE 格式的 close 事件
           if (buffer.includes('event: close') || buffer.includes('event:close')) {
             close()
@@ -150,74 +218,21 @@ export async function ssePost<T>(path: string, options: SSEPostOptions) {
           // 尝试解析连续的 JSON 对象
           let searchStart = 0
           while (searchStart < buffer.length) {
-            while (searchStart < buffer.length && /\s/.test(buffer[searchStart] ?? '')) {
-              searchStart++
-            }
+            searchStart = skipWhitespace(buffer, searchStart)
+            if (searchStart >= buffer.length) break
 
-            if (searchStart >= buffer.length) {
-              break
-            }
-
-            // 处理标准 SSE data: 前缀
-            if (buffer.slice(searchStart).startsWith('data:')) {
-              searchStart += 5
-              while (searchStart < buffer.length && buffer[searchStart] === ' ') {
-                searchStart++
-              }
-            }
+            searchStart = skipDataPrefix(buffer, searchStart)
 
             // 查找 JSON 对象的起始位置
             const jsonStart = buffer.indexOf('{', searchStart)
-            if (jsonStart === -1) {
-              break
-            }
+            if (jsonStart === -1) break
 
             // 尝试找到完整的 JSON 对象
-            let braceCount = 0
-            let jsonEnd = -1
-            let inString = false
-            let escapeNext = false
-
-            for (let i = jsonStart; i < buffer.length; i++) {
-              const char = buffer[i]
-
-              if (escapeNext) {
-                escapeNext = false
-                continue
-              }
-
-              if (char === '\\' && inString) {
-                escapeNext = true
-                continue
-              }
-
-              if (char === '"') {
-                inString = !inString
-                continue
-              }
-
-              if (!inString) {
-                if (char === '{') {
-                  braceCount++
-                } else if (char === '}') {
-                  braceCount--
-                  if (braceCount === 0) {
-                    jsonEnd = i
-                    break
-                  }
-                }
-              }
-            }
+            const jsonEnd = findCompleteJson(buffer, jsonStart)
 
             // 如果没有找到完整的 JSON，保留 buffer 等待更多数据
             if (jsonEnd === -1) {
-              if (flushAll) {
-                // 最后一次处理，尝试解析剩余内容
-                buffer = ''
-              } else {
-                // 保留从 jsonStart 开始的内容
-                buffer = buffer.slice(jsonStart)
-              }
+              buffer = flushAll ? '' : buffer.slice(jsonStart)
               break
             }
 
@@ -268,71 +283,5 @@ export async function ssePost<T>(path: string, options: SSEPostOptions) {
           reject(err)
         }
       })
-  })
-}
-
-/**
- * 使用原生 EventSource 发送 GET 请求（适用于简单场景）
- */
-export interface SSEOptions {
-  params: Record<string, string>
-  signal: AbortSignal
-}
-
-export async function sse<T>(path: string, options: SSEOptions) {
-  const { params, signal } = options
-
-  const token = useCookie('token').value
-  const search = new URLSearchParams({
-    ...params,
-    ...(token ? { token } : {})
-  })
-  const url = `${path}?${search}`
-
-  return new Promise<AsyncGenerator<T>>((resolve, reject) => {
-    const { generator, pushValue, close, pushError } = createAsyncQueue<T>()
-    let hasResolved = false
-
-    const eventSource = new EventSource(url)
-
-    eventSource.onopen = () => {
-      hasResolved = true
-      resolve(generator)
-    }
-
-    eventSource.onerror = () => {
-      const error = new Error('EventSource connection error')
-      if (hasResolved) {
-        pushError(error)
-      } else {
-        reject(error)
-      }
-      eventSource.close()
-    }
-
-    eventSource.onmessage = (event) => {
-      if (!event.data) {
-        return
-      }
-      try {
-        pushValue(JSON.parse(event.data))
-      } catch (err) {
-        pushError(err)
-      }
-    }
-
-    eventSource.addEventListener('close', () => {
-      close()
-    })
-
-    signal.addEventListener('abort', () => {
-      eventSource.close()
-      const abortError = new Error('Aborted')
-      if (hasResolved) {
-        pushError(abortError)
-      } else {
-        reject(abortError)
-      }
-    })
   })
 }

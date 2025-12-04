@@ -2,46 +2,29 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { DateValue } from '@internationalized/date'
 
-// TableColumn 类型别名
-type TableColumn<T> = ColumnDef<T>
-
-interface PageInfo {
-  current: number
-  size: number
-  total: number
-}
-
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
 
 const toast = useToast()
-
-const showAIChatPalette = ref(false)
 const exerciseList = ref<ExerciseRecord[]>([])
 const todayExerciseList = ref<ExerciseRecord[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const editingItem = ref<ExerciseRecord | null>(null)
 
-const pageInfo = reactive<PageInfo>({
+const pageInfo = reactive({
   current: 1,
   size: 10,
   total: 0
 })
 
-// 筛选器状态
-const filterExerciseType = ref<{ label: string; value: string; icon: string } | undefined>(
-  undefined
-)
+const filterExerciseType = ref<string>('all')
+const dateRange = shallowRef<{ start: DateValue; end: DateValue } | null>(null)
 
-// 日期配置
-const startDateCalendar = shallowRef<DateValue | null>(null)
-const endDateCalendar = shallowRef<DateValue | null>(null)
-
-// 运动类型选项
 const exerciseTypeOptions = [
+  { label: '全部', value: 'all', icon: 'mdi:human' },
   { label: '跑步', value: '跑步', icon: 'mdi:run' },
   { label: '游泳', value: '游泳', icon: 'mdi:swim' },
   { label: '骑行', value: '骑行', icon: 'mdi:bike' },
@@ -59,35 +42,20 @@ const exerciseTypeOptions = [
   { label: '力量训练', value: '力量训练', icon: 'mdi:weight-lifter' }
 ]
 
-// 今日统计计算属性
-const todayCalories = computed(() => {
-  return todayExerciseList.value.reduce(
-    (sum, exercise) => sum + (exercise.estimatedCaloriesBurned || 0),
-    0
-  )
-})
+const todayStats = computed(() => ({
+  calories: todayExerciseList.value.reduce((sum, e) => sum + (e.estimatedCaloriesBurned || 0), 0),
+  duration: todayExerciseList.value.reduce((sum, e) => sum + (e.durationMinutes || 0), 0),
+  count: todayExerciseList.value.length
+}))
 
-const todayDuration = computed(() => {
-  return todayExerciseList.value.reduce((sum, exercise) => sum + (exercise.durationMinutes || 0), 0)
-})
-
-const todayCount = computed(() => {
-  return todayExerciseList.value.length
-})
-
-// 健康目标
 const healthGoals = reactive({ dailyCaloriesBurn: null as number | null })
 
 const loadHealthGoals = () => {
   if (!import.meta.client) return
-  const savedGoals = localStorage.getItem('healthGoals')
-  if (savedGoals) {
-    const parsed = JSON.parse(savedGoals)
-    healthGoals.dailyCaloriesBurn = parsed.dailyCaloriesBurn
-  }
+  const saved = localStorage.getItem('healthGoals')
+  if (saved) healthGoals.dailyCaloriesBurn = JSON.parse(saved).dailyCaloriesBurn
 }
 
-// 运动强度等级
 const getIntensityLevel = (
   caloriesBurned: number | null,
   duration: number | null
@@ -99,8 +67,7 @@ const getIntensityLevel = (
   return { text: '高强度', color: 'error' }
 }
 
-// 表格列定义
-const columns: TableColumn<ExerciseRecord>[] = [
+const columns: ColumnDef<ExerciseRecord>[] = [
   {
     accessorKey: 'recordDate',
     header: '记录日期',
@@ -171,13 +138,6 @@ const columns: TableColumn<ExerciseRecord>[] = [
   }
 ]
 
-// 日期格式化
-const formatDate = (date: DateValue | null, placeholder: string): string => {
-  if (!date) return placeholder
-  return dateValueToString(date)
-}
-
-// 加载数据
 const loadData = async () => {
   loading.value = true
   try {
@@ -195,31 +155,33 @@ const loadData = async () => {
     }
 
     // 处理日期筛选
-    if (startDateCalendar.value || endDateCalendar.value) {
-      const startStr = startDateCalendar.value ? dateValueToString(startDateCalendar.value) : null
-      const endStr = endDateCalendar.value
-        ? dateValueToString(endDateCalendar.value)
-        : dateValueToString(getTodayDateValue())
-
-      // 如果只选了开始日期，使用默认结束日期（今天）
-      if (startStr && endStr) {
-        // 验证日期范围：开始日期不能晚于结束日期
-        if (startStr > endStr) {
-          toast.add({
-            title: '日期范围错误',
-            description: '开始日期不能晚于结束日期',
-            color: 'error'
-          })
-          loading.value = false
-          return
-        }
-        params.startDate = startStr
-        params.endDate = endStr
+    if (dateRange.value && (dateRange.value.start || dateRange.value.end)) {
+      if (!dateRange.value.start || !dateRange.value.end) {
+        toast.add({
+          title: '日期范围不完整',
+          description: '请填写完整的日期范围',
+          color: 'error'
+        })
+        loading.value = false
+        return
       }
+      const startStr = dateValueToString(dateRange.value.start)
+      const endStr = dateValueToString(dateRange.value.end)
+      if (startStr > endStr) {
+        toast.add({
+          title: '日期范围错误',
+          description: '开始日期不能晚于结束日期',
+          color: 'error'
+        })
+        loading.value = false
+        return
+      }
+      params.startDate = startStr
+      params.endDate = endStr
     }
 
-    if (filterExerciseType.value) {
-      params.exerciseType = filterExerciseType.value.value
+    if (filterExerciseType.value && filterExerciseType.value !== 'all') {
+      params.exerciseType = filterExerciseType.value
     }
 
     const response = await $fetch<{
@@ -248,7 +210,6 @@ const loadData = async () => {
   }
 }
 
-// 加载今日数据
 const loadTodayData = async () => {
   try {
     const userID = useCookie('userID')
@@ -286,25 +247,21 @@ const loadTodayData = async () => {
   }
 }
 
-// 打开添加对话框
 const openAddDialog = () => {
   editingItem.value = null
   showDialog.value = true
 }
 
-// 打开编辑对话框
 const openEditDialog = (item: ExerciseRecord) => {
   editingItem.value = item
   showDialog.value = true
 }
 
-// 对话框成功回调
 const handleDialogSuccess = () => {
   loadData()
   loadTodayData()
 }
 
-// 删除
 const deleteItem = async (id: number) => {
   if (!confirm('确认删除这条记录吗？')) return
 
@@ -330,22 +287,18 @@ const deleteItem = async (id: number) => {
   }
 }
 
-// 重置筛选器
 const resetFilter = () => {
-  startDateCalendar.value = null
-  endDateCalendar.value = null
-  filterExerciseType.value = undefined
+  dateRange.value = null
+  filterExerciseType.value = 'all'
   pageInfo.current = 1
   loadData()
 }
 
-// 分页变化
 const handlePageChange = (page: number) => {
   pageInfo.current = page
   loadData()
 }
 
-// 生命周期
 onMounted(() => {
   loadHealthGoals()
   loadData()
@@ -371,7 +324,7 @@ onMounted(() => {
               <UIcon name="mdi:fire" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todayCalories }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.calories }}</div>
               <div class="text-sm">今日消耗卡路里（kcal）</div>
               <div v-if="healthGoals.dailyCaloriesBurn" class="text-xs">
                 目标: {{ healthGoals.dailyCaloriesBurn }} kcal
@@ -388,8 +341,8 @@ onMounted(() => {
               <UIcon name="mdi:clock-outline" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todayDuration }}</div>
-              <div class="text-sm">今日运动时长（分钟）</div>
+              <div class="text-3xl font-bold">{{ todayStats.duration }}</div>
+              <div class="text-sm">今日运动时长（min）</div>
             </div>
           </div>
         </UCard>
@@ -401,7 +354,7 @@ onMounted(() => {
               <UIcon name="mdi:trophy" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todayCount }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.count }}</div>
               <div class="text-sm">今日运动次数</div>
             </div>
           </div>
@@ -420,30 +373,17 @@ onMounted(() => {
         </template>
 
         <div class="flex flex-wrap gap-4">
-          <!-- 开始日期 -->
+          <!-- 日期范围 -->
           <div class="min-w-[200px] flex-1">
-            <label for="exercise-filter-start-date" class="mb-2 block text-sm font-medium"
-              >开始日期</label
+            <label for="exercise-filter-date-range" class="mb-2 block text-sm font-medium"
+              >日期范围</label
             >
-            <DatePicker
-              id="exercise-filter-start-date"
-              v-model="startDateCalendar"
-              block
-              :placeholder="formatDate(startDateCalendar, '选择开始日期')"
-              @update:model-value="loadData"
-            />
-          </div>
-
-          <!-- 结束日期 -->
-          <div class="min-w-[200px] flex-1">
-            <label for="exercise-filter-end-date" class="mb-2 block text-sm font-medium"
-              >结束日期</label
-            >
-            <DatePicker
-              id="exercise-filter-end-date"
-              v-model="endDateCalendar"
-              block
-              :placeholder="formatDate(endDateCalendar, '选择结束日期')"
+            <UInputDate
+              id="exercise-filter-date-range"
+              v-model="dateRange"
+              range
+              icon="heroicons:calendar"
+              class="w-full"
               @update:model-value="loadData"
             />
           </div>
@@ -457,17 +397,22 @@ onMounted(() => {
               id="exercise-filter-type"
               v-model="filterExerciseType"
               :items="exerciseTypeOptions"
-              placeholder="全部"
+              value-key="value"
               :search-input="{
                 placeholder: '输入运动类型',
                 icon: 'mdi:magnify'
               }"
               class="w-full"
-              @change="loadData"
+              @update:model-value="loadData"
             >
-              <template #leading="{ modelValue }">
-                <UIcon v-if="modelValue" :name="modelValue.icon" class="h-5 w-5" />
-                <UIcon v-else name="mdi:human" class="h-5 w-5 text-gray-400" />
+              <template #leading>
+                <UIcon
+                  :name="
+                    exerciseTypeOptions.find((opt) => opt.value === filterExerciseType)?.icon ||
+                    'mdi:human'
+                  "
+                  class="h-5 w-5"
+                />
               </template>
             </USelectMenu>
           </div>
@@ -521,9 +466,6 @@ onMounted(() => {
         :edit-item="editingItem"
         @success="handleDialogSuccess"
       />
-
-      <!-- AI 聊天面板 -->
-      <AIChatPalette v-model:open="showAIChatPalette" />
     </UPageBody>
   </UPage>
 </template>

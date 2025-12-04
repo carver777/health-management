@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { CalendarDate } from '@internationalized/date'
 import DatePicker from '~/components/DatePicker.vue'
+import { getTodayDateValue, dateValueToString } from '~/utils/dateUtils'
 
 describe('DatePicker', () => {
   describe('渲染', () => {
@@ -31,7 +33,7 @@ describe('DatePicker', () => {
 
   describe('props', () => {
     it('应该接受 modelValue', async () => {
-      const date = createCalendarDate(2025, 6, 15)
+      const date = new CalendarDate(2025, 6, 15)
       const wrapper = await mountSuspended(DatePicker, {
         props: {
           modelValue: date

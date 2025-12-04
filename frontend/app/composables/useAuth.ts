@@ -6,25 +6,29 @@ export const useAuth = () => {
   const isInsecure = useRuntimeConfig().public.INSECURE_COOKIE === 'true'
   const cookieSecure = import.meta.env.PROD && !isInsecure
 
-  const user = useState<User | null>('user', () => null)
-  const token = useCookie<string | null>('token', {
+  // 通用配置
+  const cookieOptions = {
     maxAge: 60 * 60 * 24 * 7, // 7 天
     path: '/',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     secure: cookieSecure,
     default: () => null
-  })
+  }
 
-  const userID = useCookie<string | null>('userID', {
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-    sameSite: 'lax',
-    secure: cookieSecure,
-    default: () => null
-  })
-
+  const user = useState<User | null>('user', () => null)
+  const token = useCookie<string | null>('token', cookieOptions)
+  const userID = useCookie<string | null>('userID', cookieOptions)
   const isLoggedIn = computed(() => !!token.value)
   const toast = import.meta.client ? useToast() : { add: () => {} }
+
+  const handleError = (title: string, error: unknown) => {
+    const apiError = error as ApiError
+    toast.add({
+      title,
+      description: apiError.message || apiError.response?.data?.message || '请稍后重试',
+      color: 'error'
+    })
+  }
 
   // 解析 JWT token 获取 userID
   const parseJwt = (tokenStr: string) => {
@@ -32,14 +36,12 @@ export const useAuth = () => {
       const base64Url = tokenStr.split('.')[1]
       if (!base64Url) return null
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-      const payload = JSON.parse(atob(base64))
-      return payload
+      return JSON.parse(atob(base64))
     } catch {
       return null
     }
   }
 
-  // 登录
   const login = async (loginData: LoginRequest) => {
     try {
       const response = await $fetch<{ code: number; data?: string; msg?: string }>(
@@ -50,43 +52,32 @@ export const useAuth = () => {
         }
       )
 
-      // 适配后端返回格式：code: 1 表示成功，code: 0 表示失败
-      if (response.code === 1 && response.data) {
-        token.value = response.data
-
-        const payload = parseJwt(response.data)
-        if (payload) {
-          const userIDFromToken =
-            payload.userId || payload.userID || payload.sub || payload.id || payload.user_id
-          if (userIDFromToken) {
-            userID.value = userIDFromToken
-          }
-        }
-
-        toast.add({
-          title: '登录成功',
-          color: 'success'
-        })
-
-        await fetchUserProfile()
-
-        return true
-      } else {
-        // 后端返回失败信息
+      if (response.code !== 1 || !response.data) {
         throw new Error(response.msg || '登录失败')
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
+
+      token.value = response.data
+
+      // 从 JWT 中提取 userID
+      const payload = parseJwt(response.data)
+      if (payload) {
+        userID.value =
+          payload.userId || payload.userID || payload.sub || payload.id || payload.user_id
+      }
+
       toast.add({
-        title: '登录失败',
-        description: apiError.message || apiError.response?.data?.message || '请稍后重试',
-        color: 'error'
+        title: '登录成功',
+        color: 'success'
       })
+
+      await fetchUserProfile()
+      return true
+    } catch (error) {
+      handleError('登录失败', error)
       return false
     }
   }
 
-  // 注册
   const register = async (registerData: RegisterRequest) => {
     try {
       const response = await $fetch<{ code: number; msg?: string }>('/api/auth/register', {
@@ -94,30 +85,22 @@ export const useAuth = () => {
         body: registerData
       })
 
-      // 适配后端返回格式：code: 1 表示成功，code: 0 表示失败
-      if (response.code === 1) {
-        toast.add({
-          title: '注册成功',
-          description: '请登录',
-          color: 'success'
-        })
-        return true
-      } else {
+      if (response.code !== 1) {
         throw new Error(response.msg || '注册失败')
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
 
       toast.add({
-        title: '注册失败',
-        description: apiError.message || apiError.response?.data?.message || '请稍后重试',
-        color: 'error'
+        title: '注册成功',
+        description: '请登录',
+        color: 'success'
       })
+      return true
+    } catch (error) {
+      handleError('注册失败', error)
       return false
     }
   }
 
-  // 重置密码
   const resetPassword = async (payload: PasswordResetRequest) => {
     try {
       const response = await $fetch<{ code: number; msg?: string }>('/api/auth/password/reset', {
@@ -125,32 +108,24 @@ export const useAuth = () => {
         body: payload
       })
 
-      if (response.code === 1) {
-        toast.add({
-          title: '密码已更新',
-          description: '请使用新密码登录',
-          color: 'success'
-        })
-        return true
-      } else {
+      if (response.code !== 1) {
         throw new Error(response.msg || '重置密码失败')
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
+
       toast.add({
-        title: '重置密码失败',
-        description: apiError.message || apiError.response?.data?.message || '请稍后重试',
-        color: 'error'
+        title: '密码已更新',
+        description: '请使用新密码登录',
+        color: 'success'
       })
+      return true
+    } catch (error) {
+      handleError('重置密码失败', error)
       return false
     }
   }
 
-  // 获取用户信息
   const fetchUserProfile = async (silent = false) => {
-    if (!token.value) {
-      return false
-    }
+    if (!token.value) return false
 
     try {
       const response = await $fetch<{ code: number; data: User; msg?: string }>(
@@ -162,23 +137,23 @@ export const useAuth = () => {
         }
       )
 
-      if (response.code === 1 && response.data) {
-        user.value = response.data
-
-        // 缓存用户信息到 localStorage
-        if (import.meta.client) {
-          try {
-            localStorage.setItem('user_cache', JSON.stringify(response.data))
-            localStorage.setItem('user_cache_timestamp', Date.now().toString())
-          } catch {
-            // 忽略存储错误
-          }
-        }
-
-        return true
-      } else {
+      if (response.code !== 1 || !response.data) {
         throw new Error(response.msg || '获取用户信息失败')
       }
+
+      user.value = response.data
+
+      // 缓存用户信息到 localStorage
+      if (import.meta.client) {
+        try {
+          localStorage.setItem('user_cache', JSON.stringify(response.data))
+          localStorage.setItem('user_cache_timestamp', Date.now().toString())
+        } catch {
+          // 忽略错误
+        }
+      }
+
+      return true
     } catch (error: unknown) {
       const apiError = error as ApiError
 
@@ -191,14 +166,12 @@ export const useAuth = () => {
             color: 'warning'
           })
         }
-        return false
       }
 
       return false
     }
   }
 
-  // 更新用户信息
   const updateProfile = async (profileData: Partial<User>) => {
     try {
       const response = await $fetch<{ code: number; msg?: string }>('/api/user/profile', {
@@ -209,27 +182,21 @@ export const useAuth = () => {
         body: profileData
       })
 
-      if (response.code === 1) {
-        toast.add({
-          title: '更新成功',
-          color: 'success'
-        })
-        return true
-      } else {
+      if (response.code !== 1) {
         throw new Error(response.msg || '更新失败')
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
+
       toast.add({
-        title: '更新失败',
-        description: apiError.message || apiError.response?.data?.message || '请稍后重试',
-        color: 'error'
+        title: '更新成功',
+        color: 'success'
       })
+      return true
+    } catch (error) {
+      handleError('更新失败', error)
       return false
     }
   }
 
-  // 退出登录
   const logout = (silent = false) => {
     user.value = null
     token.value = null

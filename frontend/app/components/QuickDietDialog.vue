@@ -8,13 +8,11 @@ interface Props {
   editItem?: DietRecord | null
 }
 
-interface Emits {
-  (e: 'update:open', value: boolean): void
-  (e: 'success'): void
-}
-
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  success: []
+}>()
 
 const toast = useToast()
 const isOpen = computed({
@@ -25,7 +23,7 @@ const isOpen = computed({
 // 日历状态
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 
-// 表单验证 Schema
+// 表单验证
 const schema = z.object({
   mealType: z.string().min(1, '请选择餐次'),
   foodName: z.string().min(1, '请输入食物名称'),
@@ -52,13 +50,17 @@ const state = reactive<Schema>({
 
 const submitting = ref(false)
 
-// 是否为编辑模式
 const isEditMode = computed(() => !!props.editItem)
-
-// 对话框标题
 const dialogTitle = computed(() => (isEditMode.value ? '编辑饮食记录' : '快速记录饮食'))
 
-// 监听对话框打开，重置或填充表单
+// 获取认证信息
+const getAuthHeaders = () => {
+  const token = useCookie('token')
+  const userID = useCookie('userID')
+  if (!token.value || !userID.value) return null
+  return { token: token.value, userID: userID.value }
+}
+
 watch(isOpen, (val) => {
   if (val) {
     if (props.editItem) {
@@ -77,7 +79,6 @@ watch(isOpen, (val) => {
   }
 })
 
-// 餐次选项
 const mealTypeOptions = [
   { label: '早餐', value: '早餐', icon: 'mdi:bread-slice' },
   { label: '午餐', value: '午餐', icon: 'mdi:rice' },
@@ -85,88 +86,60 @@ const mealTypeOptions = [
   { label: '加餐', value: '加餐', icon: 'mdi:food-apple' }
 ]
 
-// 热量等级计算
+const calorieLevels = [
+  { threshold: 200, label: '低热量', color: 'success', tip: '适量摄入，注意营养均衡' },
+  { threshold: 500, label: '中热量', color: 'warning', tip: '合理的热量摄入，保持良好饮食习惯' },
+  { threshold: Infinity, label: '高热量', color: 'error', tip: '热量较高，建议适量食用并增加运动' }
+]
+
 const calorieLevel = computed(() => {
-  if (state.estimatedCalories < 200) return { label: '低热量', color: 'success' }
-  if (state.estimatedCalories < 500) return { label: '中热量', color: 'warning' }
-  return { label: '高热量', color: 'error' }
+  const level = calorieLevels.find((l) => state.estimatedCalories < l.threshold)
+  return level ?? calorieLevels[calorieLevels.length - 1]!
 })
 
-// 健康提示
-const healthTip = computed(() => {
-  if (!state.estimatedCalories) return ''
-
-  if (state.estimatedCalories < 200) {
-    return '适量摄入，注意营养均衡'
-  } else if (state.estimatedCalories >= 200 && state.estimatedCalories < 500) {
-    return '合理的热量摄入，保持良好饮食习惯'
-  } else {
-    return '热量较高，建议适量食用并增加运动'
-  }
-})
+const healthTip = computed(() => (state.estimatedCalories ? calorieLevel.value.tip : ''))
 
 // 提交表单
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   submitting.value = true
 
   try {
-    const userID = useCookie('userID')
-    const token = useCookie('token')
-    if (!token.value || !userID.value) {
+    const auth = getAuthHeaders()
+    if (!auth) {
       toast.add({ title: '请先登录', color: 'error' })
       return
     }
 
-    const recordDate = dateValueToString(calendarValue.value)
-
     const formData: DietRequest = {
-      userID: userID.value,
-      recordDate,
+      userID: auth.userID,
+      recordDate: dateValueToString(calendarValue.value),
       foodName: event.data.foodName,
       mealType: event.data.mealType,
       estimatedCalories: event.data.estimatedCalories
     }
 
-    if (isEditMode.value && props.editItem?.dietItemID) {
-      // 编辑模式
-      const response = await $fetch<{ code: number; msg?: string }>(
-        `/api/diet-items/${props.editItem.dietItemID}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          },
-          body: formData
-        }
-      )
+    const url =
+      isEditMode.value && props.editItem?.dietItemID
+        ? `/api/diet-items/${props.editItem.dietItemID}`
+        : '/api/diet-items'
+    const method = isEditMode.value ? 'PUT' : 'POST'
+    const headers = { Authorization: `Bearer ${auth.token}` }
 
-      if (response.code === 1) {
-        toast.add({ title: '更新成功', color: 'success' })
-        emit('success')
-        isOpen.value = false
-      } else {
-        toast.add({ title: response.msg || '更新失败', color: 'error' })
-      }
+    const response = await $fetch<{ code: number; msg?: string }>(url, {
+      method,
+      headers,
+      body: formData
+    })
+
+    if (response.code === 1) {
+      toast.add({ title: isEditMode.value ? '更新成功' : '记录成功', color: 'success' })
+      emit('success')
+      isOpen.value = false
     } else {
-      // 新增模式
-      const response = await $fetch<{ code: number; msg?: string; data?: number }>(
-        '/api/diet-items',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          },
-          body: formData
-        }
-      )
-
-      if (response.code === 1) {
-        toast.add({ title: '记录成功', color: 'success' })
-        emit('success')
-        isOpen.value = false
-      } else {
-        toast.add({ title: response.msg || '记录失败', color: 'error' })
-      }
+      toast.add({
+        title: response.msg || (isEditMode.value ? '更新失败' : '记录失败'),
+        color: 'error'
+      })
     }
   } catch (error) {
     const err = error as { data?: { message?: string }; message?: string }
@@ -191,20 +164,15 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
         <div class="grid grid-cols-2 gap-3">
           <UFormField label="记录日期" name="recordDate">
-            <DatePicker v-model="calendarValue" />
+            <DatePicker v-model="calendarValue" class="w-full" />
           </UFormField>
-          <UFormField label="食物名称" name="foodName">
-            <UInput v-model="state.foodName" placeholder="请输入食物名称">
-              <template #leading>
-                <UIcon name="mdi:food" />
-              </template>
-            </UInput>
-          </UFormField>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
           <UFormField label="餐次" name="mealType">
-            <USelect v-model="state.mealType" :items="mealTypeOptions" placeholder="选择餐次">
+            <USelect
+              v-model="state.mealType"
+              :items="mealTypeOptions"
+              placeholder="选择餐次"
+              class="w-full"
+            >
               <template #leading>
                 <UIcon
                   :name="
@@ -214,6 +182,16 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
                 />
               </template>
             </USelect>
+          </UFormField>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <UFormField label="食物名称" name="foodName">
+            <UInput v-model="state.foodName" placeholder="请输入食物名称" class="w-full">
+              <template #leading>
+                <UIcon name="mdi:food" />
+              </template>
+            </UInput>
           </UFormField>
           <UFormField label="估计热量" name="estimatedCalories">
             <UInput
@@ -230,7 +208,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           </UFormField>
         </div>
 
-        <!-- 营养摄入预览 -->
         <UCard v-if="state.foodName && state.estimatedCalories">
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
@@ -268,7 +245,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           </div>
         </UCard>
 
-        <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
           icon="heroicons:information-circle"

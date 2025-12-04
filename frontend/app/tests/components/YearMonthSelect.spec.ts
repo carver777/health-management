@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { CalendarDate } from '@internationalized/date'
 import YearMonthSelect from '~/components/YearMonthSelect.vue'
 
 describe('YearMonthSelect', () => {
-  const defaultPlaceholder = createCalendarDate(2025, 6, 15)
+  const defaultPlaceholder = new CalendarDate(2025, 6, 15)
 
   describe('渲染', () => {
     it('应该正确渲染组件', async () => {
@@ -48,8 +49,8 @@ describe('YearMonthSelect', () => {
       const wrapper = await mountSuspended(YearMonthSelect, {
         props: {
           placeholder: defaultPlaceholder,
-          minValue: createCalendarDate(2020, 1, 1),
-          maxValue: createCalendarDate(2030, 12, 31)
+          minValue: new CalendarDate(2020, 1, 1),
+          maxValue: new CalendarDate(2030, 12, 31)
         }
       })
 

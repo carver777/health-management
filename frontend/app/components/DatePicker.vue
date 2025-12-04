@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date'
+import { CalendarDate } from '@internationalized/date'
 
 interface Props {
   modelValue?: DateValue | null
@@ -17,8 +18,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  minValue: () => createCalendarDate(1900, 1, 1),
-  maxValue: () => createCalendarDate(2099, 12, 31),
+  minValue: () => new CalendarDate(1900, 1, 1),
+  maxValue: () => new CalendarDate(2099, 12, 31),
   placeholder: '请选择日期',
   block: false,
   size: 'md'
@@ -31,8 +32,7 @@ const calendarPlaceholder = shallowRef<DateValue>(props.modelValue || getTodayDa
 
 const internalValue = computed({
   get: () => props.modelValue || getTodayDateValue(),
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  set: (value: any) => emit('update:modelValue', value)
+  set: (value: DateValue) => emit('update:modelValue', value)
 })
 
 const displayValue = computed(() => {
@@ -40,10 +40,11 @@ const displayValue = computed(() => {
   return dateValueToString(internalValue.value)
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const handleDateSelect = (value: any) => {
+const handleDateSelect = (
+  value: DateValue | DateValue[] | Record<string, unknown> | null | undefined
+) => {
   // 只处理单个日期值
-  if (value && typeof value === 'object' && 'year' in value) {
+  if (value && typeof value === 'object' && !Array.isArray(value) && 'year' in value) {
     internalValue.value = value as DateValue
   }
   showDatePicker.value = false

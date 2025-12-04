@@ -97,6 +97,12 @@ export default defineNuxtConfig({
     }
   },
 
+  fonts: {
+    providers: {
+      fontshare: false
+    }
+  },
+
   icon: {
     provider: 'iconify',
     serverBundle: 'auto',

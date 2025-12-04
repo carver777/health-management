@@ -2,80 +2,53 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { DateValue } from '@internationalized/date'
 
-// TableColumn 类型别名
-type TableColumn<T> = ColumnDef<T>
-
-interface PageInfo {
-  current: number
-  size: number
-  total: number
-}
-
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
 
 const toast = useToast()
-const showAIChatPalette = ref(false)
-
 const bodyDataList = ref<BodyData[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const editingItem = ref<BodyData | null>(null)
 
-const pageInfo = reactive<PageInfo>({
+const pageInfo = reactive({
   current: 1,
   size: 10,
   total: 0
 })
 
 // 日期配置
-const startDateCalendar = shallowRef<DateValue | null>(null)
-const endDateCalendar = shallowRef<DateValue | null>(null)
+const dateRange = shallowRef<{ start: DateValue; end: DateValue } | null>(null)
 
-const latestBodyData = computed(() => {
-  return bodyDataList.value.length > 0 ? bodyDataList.value[0] : null
-})
+const latestBodyData = computed(() => bodyDataList.value[0] || null)
 
-const latestWeight = computed(() => {
-  return latestBodyData.value?.weightKG?.toFixed(1) || '--'
-})
+const latestWeight = computed(() => latestBodyData.value?.weightKG?.toFixed(1) || '--')
+const latestHeight = computed(() => latestBodyData.value?.heightCM?.toFixed(0) || '--')
 
-const latestHeight = computed(() => {
-  return latestBodyData.value?.heightCM?.toFixed(0) || '--'
-})
-
-const latestBMI = computed(() => {
+const bmiInfo = computed(() => {
   const bmi = calcBMI({
     weightKG: latestBodyData.value?.weightKG ?? 0,
     heightCM: latestBodyData.value?.heightCM ?? 0
   })
-  return bmi == null ? '--' : bmi.toFixed(1)
+  const status = getBMIStatus(bmi)
+  return {
+    value: bmi == null ? '--' : bmi.toFixed(1),
+    status: status.status,
+    color: status.color
+  }
 })
-
-const _latestBMIValue = computed(() =>
-  calcBMI({
-    weightKG: latestBodyData.value?.weightKG ?? 0,
-    heightCM: latestBodyData.value?.heightCM ?? 0
-  })
-)
-
-const bmiStatus = computed(() => getBMIStatus(_latestBMIValue.value).status)
-const bmiStatusColor = computed(() => getBMIStatus(_latestBMIValue.value).color)
 
 const healthGoals = reactive({ targetWeight: null as number | null })
 
 const loadHealthGoals = () => {
   if (!import.meta.client) return
-  const savedGoals = localStorage.getItem('healthGoals')
-  if (savedGoals) {
-    const parsed = JSON.parse(savedGoals)
-    healthGoals.targetWeight = parsed.targetWeight
-  }
+  const saved = localStorage.getItem('healthGoals')
+  if (saved) healthGoals.targetWeight = JSON.parse(saved).targetWeight
 }
 
-const columns: TableColumn<BodyData>[] = [
+const columns: ColumnDef<BodyData>[] = [
   {
     accessorKey: 'recordDate',
     header: '记录日期',
@@ -130,10 +103,6 @@ const columns: TableColumn<BodyData>[] = [
   }
 ]
 
-const formatDate = (date: DateValue | null, placeholder: string): string => {
-  return date ? dateValueToString(date) : placeholder
-}
-
 const loadData = async () => {
   loading.value = true
   try {
@@ -151,27 +120,29 @@ const loadData = async () => {
     }
 
     // 处理日期筛选
-    if (startDateCalendar.value || endDateCalendar.value) {
-      const startStr = startDateCalendar.value ? dateValueToString(startDateCalendar.value) : null
-      const endStr = endDateCalendar.value
-        ? dateValueToString(endDateCalendar.value)
-        : dateValueToString(getTodayDateValue())
-
-      // 如果只选了开始日期，使用默认结束日期（今天）
-      if (startStr && endStr) {
-        // 验证日期范围：开始日期不能晚于结束日期
-        if (startStr > endStr) {
-          toast.add({
-            title: '日期范围错误',
-            description: '开始日期不能晚于结束日期',
-            color: 'error'
-          })
-          loading.value = false
-          return
-        }
-        params.startDate = startStr
-        params.endDate = endStr
+    if (dateRange.value && (dateRange.value.start || dateRange.value.end)) {
+      if (!dateRange.value.start || !dateRange.value.end) {
+        toast.add({
+          title: '日期范围不完整',
+          description: '请填写完整的日期范围',
+          color: 'error'
+        })
+        loading.value = false
+        return
       }
+      const startStr = dateValueToString(dateRange.value.start)
+      const endStr = dateValueToString(dateRange.value.end)
+      if (startStr > endStr) {
+        toast.add({
+          title: '日期范围错误',
+          description: '开始日期不能晚于结束日期',
+          color: 'error'
+        })
+        loading.value = false
+        return
+      }
+      params.startDate = startStr
+      params.endDate = endStr
     }
 
     const response = await $fetch<{
@@ -200,19 +171,16 @@ const loadData = async () => {
   }
 }
 
-// 打开添加对话框
 const openAddDialog = () => {
   editingItem.value = null
   showDialog.value = true
 }
 
-// 打开编辑对话框
 const openEditDialog = (item: BodyData) => {
   editingItem.value = item
   showDialog.value = true
 }
 
-// 对话框成功回调
 const handleDialogSuccess = () => {
   loadData()
 }
@@ -243,10 +211,8 @@ const deleteItem = async (item: BodyData) => {
   }
 }
 
-// 重置筛选器
 const resetFilter = () => {
-  startDateCalendar.value = null
-  endDateCalendar.value = null
+  dateRange.value = null
   pageInfo.current = 1
   loadData()
 }
@@ -255,7 +221,6 @@ const handlePageChange = (page: number) => {
   pageInfo.current = page
   loadData()
 }
-// 生命周期
 onMounted(() => {
   loadHealthGoals()
   loadData()
@@ -311,9 +276,9 @@ onMounted(() => {
               <UIcon name="mdi:chart-bar" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ latestBMI }}</div>
+              <div class="text-3xl font-bold">{{ bmiInfo.value }}</div>
               <div class="text-sm">BMI 指数</div>
-              <div :class="['text-sm font-medium', bmiStatusColor]">{{ bmiStatus }}</div>
+              <div :class="['text-sm font-medium', bmiInfo.color]">{{ bmiInfo.status }}</div>
             </div>
           </div>
         </UCard>
@@ -331,30 +296,17 @@ onMounted(() => {
         </template>
 
         <div class="flex flex-wrap gap-4">
-          <!-- 开始日期 -->
+          <!-- 日期范围 -->
           <div class="min-w-[200px] flex-1">
-            <label for="body-filter-start-date" class="mb-2 block text-sm font-medium"
-              >开始日期</label
+            <label for="body-filter-date-range" class="mb-2 block text-sm font-medium"
+              >日期范围</label
             >
-            <DatePicker
-              id="body-filter-start-date"
-              v-model="startDateCalendar"
-              block
-              :placeholder="formatDate(startDateCalendar, '选择开始日期')"
-              @update:model-value="loadData"
-            />
-          </div>
-
-          <!-- 结束日期 -->
-          <div class="min-w-[200px] flex-1">
-            <label for="body-filter-end-date" class="mb-2 block text-sm font-medium"
-              >结束日期</label
-            >
-            <DatePicker
-              id="body-filter-end-date"
-              v-model="endDateCalendar"
-              block
-              :placeholder="formatDate(endDateCalendar, '选择结束日期')"
+            <UInputDate
+              id="body-filter-date-range"
+              v-model="dateRange"
+              range
+              class="w-full"
+              icon="heroicons:calendar"
               @update:model-value="loadData"
             />
           </div>
@@ -413,9 +365,6 @@ onMounted(() => {
         :edit-item="editingItem"
         @success="handleDialogSuccess"
       />
-
-      <!-- AI 聊天面板 -->
-      <AIChatPalette v-model:open="showAIChatPalette" />
     </UPageBody>
   </UPage>
 </template>

@@ -1,3 +1,94 @@
+<script setup lang="ts">
+import type { NavigationMenuItem, DropdownMenuItem } from '@nuxt/ui'
+
+const router = useRouter()
+const route = useRoute()
+const { user, logout } = useAuth()
+const { getAvatarUrl } = useAvatar()
+
+const isCollapsed = ref(false)
+const isSidebarOpen = ref(false)
+
+// 确保侧边栏状态在客户端正确初始化
+onMounted(() => {
+  if (!import.meta.client) return
+
+  const storedSize = localStorage.getItem('nuxt-ui-dashboard-sidebar-size')
+  if (!storedSize) return
+
+  try {
+    const size = parseFloat(storedSize)
+    if (size < 15 || size > 30 || (size > 16 && size < 16.7 && size !== 20)) {
+      localStorage.removeItem('nuxt-ui-dashboard-sidebar-size')
+    }
+  } catch {
+    localStorage.removeItem('nuxt-ui-dashboard-sidebar-size')
+  }
+})
+
+const menuItems = computed<NavigationMenuItem[]>(() => [
+  {
+    label: '数据概览',
+    icon: 'mdi:view-dashboard',
+    to: '/dashboard',
+    active: route.path === '/dashboard'
+  },
+  {
+    label: '身体数据',
+    icon: 'mdi:clipboard-text',
+    to: '/body-data',
+    active: route.path === '/body-data'
+  },
+  {
+    label: '饮食管理',
+    icon: 'mdi:food-apple',
+    to: '/diet',
+    active: route.path === '/diet'
+  },
+  {
+    label: '运动管理',
+    icon: 'mdi:run-fast',
+    to: '/exercise',
+    active: route.path === '/exercise'
+  },
+  {
+    label: '睡眠管理',
+    icon: 'mdi:sleep',
+    to: '/sleep',
+    active: route.path === '/sleep'
+  },
+  {
+    label: '健康咨询',
+    icon: 'heroicons:chat-bubble-left-right',
+    to: '/chat',
+    active: route.path === '/chat'
+  }
+])
+
+const handleLogout = async () => {
+  logout()
+  await navigateTo('/login', { replace: true })
+}
+
+const accountMenuItems = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: '个人资料',
+      icon: 'heroicons:user',
+      to: '/profile'
+    }
+  ],
+  [
+    {
+      label: '退出登录',
+      icon: 'heroicons:arrow-right-on-rectangle',
+      color: 'error',
+      onSelect: handleLogout
+    }
+  ]
+])
+</script>
+
 <template>
   <UDashboardGroup>
     <ClientOnly>
@@ -62,8 +153,8 @@
               >
                 <template #leading>
                   <UAvatar
-                    v-bind="userInfo.avatarUrl ? { src: userInfo.avatarUrl } : {}"
-                    :alt="userInfo.user.nickname"
+                    :src="getAvatarUrl()"
+                    :alt="user?.nickname || '用户'"
                     size="xs"
                     icon="heroicons:user"
                   />
@@ -104,105 +195,3 @@
     </UTooltip>
   </UDashboardGroup>
 </template>
-
-<script setup lang="ts">
-import type { NavigationMenuItem, DropdownMenuItem } from '@nuxt/ui'
-
-const router = useRouter()
-const route = useRoute()
-const { user, logout } = useAuth()
-const { getAvatarUrl } = useAvatar()
-
-const isCollapsed = ref(false)
-const isSidebarOpen = ref(false)
-
-// 确保侧边栏状态在客户端正确初始化
-onMounted(() => {
-  if (import.meta.client) {
-    const storedSize = localStorage.getItem('nuxt-ui-dashboard-sidebar-size')
-    if (storedSize) {
-      try {
-        const size = parseFloat(storedSize)
-        if (size < 15 || size > 30 || (size > 16 && size < 16.7 && size !== 20)) {
-          localStorage.removeItem('nuxt-ui-dashboard-sidebar-size')
-        }
-      } catch {
-        localStorage.removeItem('nuxt-ui-dashboard-sidebar-size')
-      }
-    }
-  }
-})
-
-const userInfo = computed(() => ({
-  user: user.value || { nickname: '用户' },
-  avatarUrl: getAvatarUrl()
-}))
-
-const menuItems = computed<NavigationMenuItem[]>(() => [
-  {
-    label: '数据概览',
-    icon: 'mdi:view-dashboard',
-    to: '/dashboard',
-    active: route.path === '/dashboard'
-  },
-  {
-    label: '身体数据',
-    icon: 'mdi:clipboard-text',
-    to: '/body-data',
-    active: route.path === '/body-data'
-  },
-  {
-    label: '饮食管理',
-    icon: 'mdi:food-apple',
-    to: '/diet',
-    active: route.path === '/diet'
-  },
-  {
-    label: '运动管理',
-    icon: 'mdi:run-fast',
-    to: '/exercise',
-    active: route.path === '/exercise'
-  },
-  {
-    label: '睡眠管理',
-    icon: 'mdi:sleep',
-    to: '/sleep',
-    active: route.path === '/sleep'
-  },
-  {
-    label: '健康咨询',
-    icon: 'heroicons:chat-bubble-left-right',
-    to: '/chat',
-    active: route.path === '/chat'
-  }
-])
-
-const handleLogout = async () => {
-  try {
-    logout()
-    await navigateTo('/login', { replace: true })
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'message' in err && 'stack' in err) {
-      throw err
-    }
-  }
-}
-
-const accountMenuItems = computed<DropdownMenuItem[][]>(() => [
-  [
-    {
-      label: '个人资料',
-      icon: 'heroicons:user',
-      to: '/profile'
-    }
-  ],
-  [
-    {
-      label: '退出登录',
-      icon: 'heroicons:arrow-right-on-rectangle',
-      color: 'error',
-      onSelect: handleLogout
-    }
-  ]
-])
-</script>

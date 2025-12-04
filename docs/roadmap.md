@@ -40,7 +40,6 @@
     - QuickDietDialog: 快速记录饮食
     - QuickExerciseDialog: 快速记录运动
     - QuickSleepDialog: 快速记录睡眠
-    - AIChatPalette: AI 助手快捷入口
     - CaloriesChart: 卡路里图表
     - WeightChart: 体重图表
 
@@ -76,6 +75,10 @@
 - [ ] Chat/Ai/WebSearch/Upload 控制器契约测试与超时回退覆盖 (截止日期: 12 月 6 日)
 
 ## 更新日志
+
+### 2025-12-5
+
+- 清理前端代码，补充登录页重置密码的端到端测试
 
 ### 2025-12-2
 
@@ -152,4 +155,4 @@
 
 ---
 
-**最后更新于** 2025 年 12 月 2 日
+**最后更新于** 2025 年 12 月 5 日

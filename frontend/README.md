@@ -107,7 +107,6 @@ health-management/
 │   │   └── css/
 │   │       └── main.css              # 全局样式
 │   ├── components/
-│   │   ├── AIChatPalette.vue         # AI 助手快捷入口
 │   │   ├── CaloriesChart.client.vue  # 卡路里图表（客户端）
 │   │   ├── WeightChart.client.vue    # 体重图表（客户端）
 │   │   ├── DatePicker.vue            # 日期选择器（对年月选择器的封装）
@@ -121,20 +120,20 @@ health-management/
 │   │   ├── useAvatar.ts              # 头像状态检测与 URL 缓存
 │   │   └── useECharts.ts             # ECharts 配置
 │   ├── layouts/
-│   │   ├── blank.vue                 # 空白布局（登录页）
-│   │   └── default.vue               # 默认布局（导航栏）
+│   │   ├── blank.vue                 # 登录页
+│   │   └── default.vue               # 导航栏
 │   ├── middleware/
 │   │   └── auth.ts                   # 认证中间件
 │   ├── pages/
-│   │   ├── index.vue                 # 首页（预渲染）
-│   │   ├── login.vue                 # 登录/注册（预渲染）
-│   │   ├── dashboard.vue             # 数据概览（CSR）
-│   │   ├── body-data.vue             # 身体数据（CSR）
-│   │   ├── diet.vue                  # 饮食管理（CSR）
-│   │   ├── exercise.vue              # 运动管理（CSR）
-│   │   ├── sleep.vue                 # 睡眠管理（CSR）
-│   │   ├── chat.vue                  # AI 咨询（CSR）
-│   │   └── profile.vue               # 个人中心（CSR）
+│   │   ├── index.vue                 # 首页
+│   │   ├── login.vue                 # 登录/注册
+│   │   ├── dashboard.vue             # 数据概览
+│   │   ├── body-data.vue             # 身体数据
+│   │   ├── diet.vue                  # 饮食管理
+│   │   ├── exercise.vue              # 运动管理
+│   │   ├── sleep.vue                 # 睡眠管理
+│   │   ├── chat.vue                  # AI 咨询
+│   │   └── profile.vue               # 个人中心
 │   ├── plugins/
 │   │   └── auth.client.ts            # 客户端认证插件
 │   ├── tests/                        # 单元测试
@@ -155,7 +154,7 @@ health-management/
 │   └── spa-loading-template.html     # SPA 加载模板
 ├── server/
 │   └── middleware/
-│       └── api-proxy.ts              # Nitro Server 反向代理 `/api/*`
+│       └── api-proxy.ts              # Nitro Server 反向代理
 ├── e2e/                              # E2E 测试（Playwright）
 │   ├── home.spec.ts                  # 首页测试
 │   └── login.spec.ts                 # 登录/注册页测试

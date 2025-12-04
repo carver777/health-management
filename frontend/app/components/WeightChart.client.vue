@@ -4,12 +4,8 @@ interface Props {
   timePeriod: string
 }
 
-interface Emits {
-  (e: 'update:timePeriod', value: string): void
-}
-
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{ 'update:timePeriod': [value: string] }>()
 
 const { echarts, initChart, disposeChart } = useECharts()
 
@@ -29,7 +25,6 @@ const timePeriodButtons = [
   { label: '90 天', value: '90d' }
 ]
 
-// 计算平均体重
 const averageWeight = computed(() => {
   if (props.data.length === 0) return 0
   const total = props.data.reduce((sum, item) => sum + item.weight, 0)
@@ -59,11 +54,7 @@ const updateChart = () => {
     title: {
       show: !hasData,
       text: '暂无体重数据',
-      textStyle: {
-        color: '#999',
-        fontSize: 16,
-        fontWeight: 'normal'
-      },
+      textStyle: { color: '#999', fontSize: 16, fontWeight: 'normal' },
       left: 'center',
       top: 'middle'
     },
@@ -72,66 +63,35 @@ const updateChart = () => {
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: '#667eea',
       borderWidth: 1,
-      textStyle: {
-        color: '#333'
-      },
+      textStyle: { color: '#333' },
       formatter: (params: unknown) => {
-        const paramsArray = Array.isArray(params) ? params : [params]
-        const data = paramsArray[0] as Record<string, unknown>
-        if (!data) return ''
-        return `
-          <div style="padding: 8px;">
-            <div style="font-weight: 600; margin-bottom: 4px;">${data.axisValueLabel || ''}</div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="display: inline-block; width: 10px; height: 10px; background: ${data.color || '#667eea'}; border-radius: 50%;"></span>
-              <span>体重: ${data.value || 0} kg</span>
-            </div>
+        if (!Array.isArray(params) || params.length === 0) return ''
+        const data = params[0] as { axisValueLabel: string; value: number; color: string }
+        return `<div style="padding: 8px;">
+          <div style="font-weight: 600; margin-bottom: 4px;">${data.axisValueLabel}</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 10px; height: 10px; background: ${data.color}; border-radius: 50%;"></span>
+            <span>体重: ${data.value} kg</span>
           </div>
-        `
+        </div>`
       }
     },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '5%',
-      show: hasData
-    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '5%', show: hasData },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: props.data.map((item) => item.date),
       show: hasData,
-      axisLine: {
-        lineStyle: {
-          color: '#e0e6ed'
-        }
-      },
-      axisLabel: {
-        color: '#64748b',
-        fontSize: 12
-      }
+      axisLine: { lineStyle: { color: '#e0e6ed' } },
+      axisLabel: { color: '#64748b', fontSize: 12 }
     },
     yAxis: {
       type: 'value',
       show: hasData,
-      axisLine: {
-        show: false
-      },
-      axisTick: {
-        show: false
-      },
-      axisLabel: {
-        color: '#64748b',
-        fontSize: 12,
-        formatter: '{value} kg'
-      },
-      splitLine: {
-        lineStyle: {
-          color: '#f1f5f9',
-          type: 'dashed'
-        }
-      }
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#64748b', fontSize: 12, formatter: '{value} kg' },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
     },
     series: hasData
       ? [
@@ -178,7 +138,7 @@ onMounted(() => {
   init()
   window.addEventListener('resize', handleResize)
 
-  // 使用 ResizeObserver 监听容器大小变化
+  // 监听容器大小变化
   if (chartRef.value) {
     resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(chartRef.value)

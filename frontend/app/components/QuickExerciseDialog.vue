@@ -8,13 +8,11 @@ interface Props {
   editItem?: ExerciseRecord | null
 }
 
-interface Emits {
-  (e: 'update:open', value: boolean): void
-  (e: 'success'): void
-}
-
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  success: []
+}>()
 
 const toast = useToast()
 const isOpen = computed({
@@ -22,37 +20,37 @@ const isOpen = computed({
   set: (value) => emit('update:open', value)
 })
 
-// 日历状态
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 
-// 用户体重（从最新身体数据获取）
 const userWeight = ref<number | null>(null)
 const loadingWeight = ref(false)
 
-// 获取用户最新体重
-const fetchUserWeight = async () => {
+// 获取认证信息
+const getAuthHeaders = () => {
   const token = useCookie('token')
   const userID = useCookie('userID')
+  if (!token.value || !userID.value) return null
+  return { token: token.value, userID: userID.value }
+}
 
-  if (!token.value || !userID.value) {
-    return
-  }
+// 获取用户最新体重
+const fetchUserWeight = async () => {
+  const auth = getAuthHeaders()
+  if (!auth) return
 
   loadingWeight.value = true
   try {
     const response = await $fetch<{ code: number; data?: { rows?: BodyData[] } }>(
       '/api/body-metrics',
       {
-        headers: { Authorization: `Bearer ${token.value}` },
-        params: { page: 1, pageSize: 1, userID: userID.value }
+        headers: { Authorization: `Bearer ${auth.token}` },
+        params: { page: 1, pageSize: 1, userID: auth.userID }
       }
     )
 
-    if (response.code === 1 && response.data?.rows?.length) {
-      const firstRow = response.data.rows[0]
-      if (firstRow) {
-        userWeight.value = firstRow.weightKG
-      }
+    const firstRow = response.data?.rows?.[0]
+    if (response.code === 1 && firstRow) {
+      userWeight.value = firstRow.weightKG
     }
   } catch {
     // 静默失败，使用默认值
@@ -61,7 +59,7 @@ const fetchUserWeight = async () => {
   }
 }
 
-// 表单验证 Schema
+// 表单验证
 const schema = z.object({
   exerciseType: z.string().min(1, '请选择或输入运动类型'),
   durationMinutes: z
@@ -84,16 +82,11 @@ const state = reactive<Schema>({
 
 const submitting = ref(false)
 
-// 是否为编辑模式
 const isEditMode = computed(() => !!props.editItem)
-
-// 对话框标题
 const dialogTitle = computed(() => (isEditMode.value ? '编辑运动记录' : '快速记录运动'))
 
-// 监听对话框打开，重置或填充表单，并获取用户体重
 watch(isOpen, async (val) => {
   if (val) {
-    // 获取用户最新体重
     await fetchUserWeight()
 
     if (props.editItem) {
@@ -114,7 +107,6 @@ watch(isOpen, async (val) => {
   }
 })
 
-// 运动类型选项（包含 MET 值）
 const exerciseTypeOptions = [
   { label: '跑步', value: '跑步', icon: 'mdi:run', met: { low: 6, medium: 9.8, high: 11.5 } },
   { label: '游泳', value: '游泳', icon: 'mdi:swim', met: { low: 5.8, medium: 8, high: 10 } },
@@ -158,7 +150,6 @@ const exerciseTypeOptions = [
   }
 ]
 
-// 强度选项
 const intensityOptions = [
   { label: '低强度', value: '低强度', icon: 'mdi:leaf', key: 'low' as const },
   { label: '中等强度', value: '中等强度', icon: 'mdi:speedometer-medium', key: 'medium' as const },
@@ -166,10 +157,8 @@ const intensityOptions = [
 ]
 
 // 获取强度对应的 key
-const getIntensityKey = (intensity: string): 'low' | 'medium' | 'high' => {
-  const option = intensityOptions.find((o) => o.value === intensity)
-  return option?.key || 'medium'
-}
+const getIntensityKey = (intensity: string): 'low' | 'medium' | 'high' =>
+  intensityOptions.find((o) => o.value === intensity)?.key ?? 'medium'
 
 /**
  * 科学计算热量消耗
@@ -177,76 +166,65 @@ const getIntensityKey = (intensity: string): 'low' | 'medium' | 'high' => {
  * MET (Metabolic Equivalent of Task) 代谢当量
  */
 const calculateCalories = () => {
-  if (!state.durationMinutes || !state.exerciseType || !state.intensity) {
-    return
-  }
+  if (!state.durationMinutes || !state.exerciseType || !state.intensity) return
 
-  // 获取运动类型的 MET 值
   const exercise = exerciseTypeOptions.find((o) => o.value === state.exerciseType)
-  if (!exercise) {
-    return
-  }
+  if (!exercise) return
 
   const intensityKey = getIntensityKey(state.intensity)
   const met = exercise.met[intensityKey]
-
-  // 使用用户体重，如果没有则使用默认值 65kg
   const weight = userWeight.value || 65
   const hours = state.durationMinutes / 60
 
-  // 公式: MET × 体重 (kg) × 时间 (小时)
   state.estimatedCaloriesBurned = Math.round(met * weight * hours)
 }
 
-// 监听运动类型、时长、强度变化，自动计算热量
 watch([() => state.exerciseType, () => state.durationMinutes, () => state.intensity], () => {
   calculateCalories()
 })
 
-// 热量消耗率
-const calorieRate = computed(() => {
-  if (state.durationMinutes && state.estimatedCaloriesBurned) {
-    return (state.estimatedCaloriesBurned / state.durationMinutes).toFixed(1)
-  }
-  return '0'
-})
+const calorieRate = computed(() =>
+  state.durationMinutes && state.estimatedCaloriesBurned
+    ? (state.estimatedCaloriesBurned / state.durationMinutes).toFixed(1)
+    : '0'
+)
 
-// 健康指数
 const healthScore = computed(() => {
-  if (state.durationMinutes && state.estimatedCaloriesBurned) {
-    const score = (state.estimatedCaloriesBurned / state.durationMinutes) * 10
-    return Math.min(Math.round(score), 100)
-  }
-  return 0
+  if (!state.durationMinutes || !state.estimatedCaloriesBurned) return 0
+  const score = (state.estimatedCaloriesBurned / state.durationMinutes) * 10
+  return Math.min(Math.round(score), 100)
 })
 
-// 进度条颜色
 const progressColor = computed(() => {
   if (healthScore.value >= 80) return 'success'
   if (healthScore.value >= 50) return 'warning'
   return 'error'
 })
 
-// 强度标签颜色
-const intensityColor = computed(() => {
-  if (state.intensity === '低强度') return 'success'
-  if (state.intensity === '中等强度') return 'warning'
-  if (state.intensity === '高强度') return 'error'
-  return 'neutral'
-})
+const intensityColorMap: Record<string, 'success' | 'warning' | 'error'> = {
+  低强度: 'success',
+  中等强度: 'warning',
+  高强度: 'error'
+}
 
-// 健康提示
+const intensityColor = computed(() =>
+  state.intensity && intensityColorMap[state.intensity]
+    ? intensityColorMap[state.intensity]
+    : 'neutral'
+)
+
+const healthTips: Record<string, string> = {
+  high: '高强度运动，注意适量，避免过度疲劳',
+  low: '轻度运动，建议适当增加运动强度以获得更好效果',
+  normal: '运动强度适中，继续保持！'
+}
+
 const healthTip = computed(() => {
   if (!state.durationMinutes || !state.estimatedCaloriesBurned) return ''
-
   const rate = state.estimatedCaloriesBurned / state.durationMinutes
-  if (rate > 12) {
-    return '高强度运动，注意适量，避免过度疲劳'
-  } else if (rate < 5) {
-    return '轻度运动，建议适当增加运动强度以获得更好效果'
-  } else {
-    return '运动强度适中，继续保持！'
-  }
+  if (rate > 12) return healthTips.high
+  if (rate < 5) return healthTips.low
+  return healthTips.normal
 })
 
 // 提交表单
@@ -254,64 +232,45 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   submitting.value = true
 
   try {
-    const userID = useCookie('userID')
-    const token = useCookie('token')
-    if (!token.value || !userID.value) {
+    const auth = getAuthHeaders()
+    if (!auth) {
       toast.add({ title: '请先登录', color: 'error' })
       return
     }
 
-    const recordDate = dateValueToString(calendarValue.value)
-
     const formData: ExerciseRequest = {
-      userID: userID.value,
+      userID: auth.userID,
       exerciseType: event.data.exerciseType,
-      recordDate,
+      recordDate: dateValueToString(calendarValue.value),
       durationMinutes: event.data.durationMinutes,
       estimatedCaloriesBurned: event.data.estimatedCaloriesBurned
-      // intensity 字段仅用于前端计算和 UI 显示，不发送到后端
     }
 
-    if (isEditMode.value && props.editItem?.exerciseItemID) {
-      // 编辑模式
-      const response = await $fetch<{ code: number; msg?: string }>(
-        `/api/exercise-items/${props.editItem.exerciseItemID}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          },
-          body: formData
-        }
-      )
+    const url =
+      isEditMode.value && props.editItem?.exerciseItemID
+        ? `/api/exercise-items/${props.editItem.exerciseItemID}`
+        : '/api/exercise-items'
+    const method = isEditMode.value ? 'PUT' : 'POST'
+    const headers = { Authorization: `Bearer ${auth.token}` }
 
-      if (response.code === 1) {
-        toast.add({ title: '运动记录更新成功！', color: 'success' })
-        emit('success')
-        isOpen.value = false
-      } else {
-        toast.add({ title: response.msg || '更新失败', color: 'error' })
-      }
+    const response = await $fetch<{ code: number; msg?: string }>(url, {
+      method,
+      headers,
+      body: formData
+    })
+
+    if (response.code === 1) {
+      toast.add({
+        title: isEditMode.value ? '运动记录更新成功！' : '运动记录添加成功！',
+        color: 'success'
+      })
+      emit('success')
+      isOpen.value = false
     } else {
-      // 新增模式
-      const response = await $fetch<{ code: number; msg?: string; data?: number }>(
-        '/api/exercise-items',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          },
-          body: formData
-        }
-      )
-
-      if (response.code === 1) {
-        toast.add({ title: '运动记录添加成功！', color: 'success' })
-        emit('success')
-        isOpen.value = false
-      } else {
-        toast.add({ title: response.msg || '记录失败', color: 'error' })
-      }
+      toast.add({
+        title: response.msg || (isEditMode.value ? '更新失败' : '记录失败'),
+        color: 'error'
+      })
     }
   } catch (error) {
     const err = error as { data?: { message?: string }; message?: string }
@@ -338,7 +297,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
     <template #body="{ close }">
       <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
         <UFormField label="记录日期" name="recordDate">
-          <DatePicker v-model="calendarValue" />
+          <DatePicker v-model="calendarValue" class="w-full" />
         </UFormField>
 
         <div class="grid grid-cols-2 gap-4">
@@ -352,6 +311,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
                 placeholder: '输入运动类型',
                 icon: 'mdi:magnify'
               }"
+              class="w-full"
             >
               <template #leading="{ modelValue }">
                 <UIcon
@@ -378,6 +338,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               placeholder="运动时长"
               :min="1"
               :max="600"
+              class="w-full"
             >
               <template #trailing>
                 <span class="text-xs">min</span>
@@ -407,6 +368,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
             type="number"
             placeholder="消耗热量"
             :min="0"
+            class="w-full"
           >
             <template #trailing>
               <span class="text-xs">kcal</span>
@@ -425,7 +387,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           </template>
         </UFormField>
 
-        <!-- 运动效果预览 -->
         <UCard v-if="state.exerciseType && state.durationMinutes && state.estimatedCaloriesBurned">
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
@@ -485,7 +446,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           </div>
         </UCard>
 
-        <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
           icon="mdi:information"

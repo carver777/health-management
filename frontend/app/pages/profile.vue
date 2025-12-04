@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date'
+import { CalendarDate } from '@internationalized/date'
 
 definePageMeta({
   middleware: 'auth',
@@ -22,21 +23,9 @@ const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 const avatarFile = ref<File | null>(null)
 const showEditDialog = ref(false)
 const showGoalsDialog = ref(false)
-const showAIChatPalette = ref(false)
 
 // 用户信息
-const defaultUser: User & { registrationDate?: string } = {
-  userID: '',
-  email: '',
-  nickname: '张三',
-  gender: '男',
-  dateOfBirth: '2000-01-01',
-  avatarUrl: '',
-  registrationDate: undefined
-}
-const userInfo = computed<User & { registrationDate?: string }>(
-  () => (user.value as User & { registrationDate?: string }) ?? defaultUser
-)
+const userInfo = computed(() => user.value as (User & { registrationDate?: string }) | null)
 const avatarUrl = computed(() =>
   avatarFile.value ? URL.createObjectURL(avatarFile.value) : getAvatarUrl()
 )
@@ -47,13 +36,17 @@ const healthStats = reactive({
   registrationDays: 0
 })
 const goals = reactive({
-  targetWeight: null as number | null,
-  dailyCaloriesIntake: null as number | null,
-  dailyCaloriesBurn: null as number | null
+  targetWeight: 70 as number | null,
+  dailyCaloriesIntake: 2000 as number | null,
+  dailyCaloriesBurn: 2000 as number | null,
+  dailySleepHours: 8 as number | null
 })
-const currentWeight = ref<number | null>(null)
-const todayCalories = ref(0)
-const todayCaloriesBurned = ref(0)
+const todayData = reactive({
+  weight: null as number | null,
+  calories: 0,
+  caloriesBurned: 0,
+  sleepHours: 0
+})
 
 // 表单状态
 const editForm = reactive({ nickname: '', gender: '', dateOfBirth: '' })
@@ -61,7 +54,8 @@ const passwordForm = reactive({ newPassword: '', confirmPassword: '' })
 const goalsForm = reactive({
   targetWeight: null as number | null,
   dailyCaloriesIntake: null as number | null,
-  dailyCaloriesBurn: null as number | null
+  dailyCaloriesBurn: null as number | null,
+  dailySleepHours: null as number | null
 })
 const basicInfoSubmitting = ref(false)
 const passwordSubmitting = ref(false)
@@ -80,13 +74,11 @@ const GENDER_OPTIONS = [
 ]
 
 const refreshRegistrationDays = () => {
-  const registrationDate = userInfo.value.registrationDate
-  if (!registrationDate) {
-    healthStats.registrationDays = 0
-    return
-  }
-  const diffTime = Math.abs(Date.now() - new Date(registrationDate).getTime())
-  healthStats.registrationDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const registrationDate = userInfo.value?.registrationDate
+  if (!registrationDate) return (healthStats.registrationDays = 0)
+  healthStats.registrationDays = Math.ceil(
+    (Date.now() - new Date(registrationDate).getTime()) / (1000 * 60 * 60 * 24)
+  )
 }
 
 // 格式化日期
@@ -105,30 +97,21 @@ const uploadAvatar = async () => {
   try {
     const formData = new FormData()
     formData.append('avatar', avatarFile.value)
-    const response = await $fetch<{ code: number; msg: string }>('/api/user/avatar', {
+    const { code, msg } = await $fetch<{ code: number; msg: string }>('/api/user/avatar', {
       method: 'POST',
       body: formData,
       headers: tokenCookie.value ? { token: tokenCookie.value } : undefined
     })
 
-    if (response.code === 1) {
+    if (code === 1) {
       markAvatarUpdated()
       avatarFile.value = null
       toast.add({ title: '头像上传成功', color: 'success' })
     } else {
-      toast.add({ title: response.msg || '上传头像失败', color: 'error' })
+      toast.add({ title: msg || '上传头像失败', color: 'error' })
     }
-  } catch (error: unknown) {
-    const errorMsg =
-      error &&
-      typeof error === 'object' &&
-      'data' in error &&
-      error.data &&
-      typeof error.data === 'object' &&
-      'msg' in error.data
-        ? String(error.data.msg)
-        : '上传头像失败'
-    toast.add({ title: errorMsg, color: 'error' })
+  } catch {
+    toast.add({ title: '上传头像失败', color: 'error' })
   }
 }
 
@@ -136,12 +119,9 @@ const uploadAvatar = async () => {
 const loadUserData = async () => {
   loading.value = true
   try {
-    const success = await fetchUserProfile()
-    if (!success) {
-      throw new Error('fetch failed')
-    }
+    await fetchUserProfile()
     refreshRegistrationDays()
-    await loadHealthStats()
+    await Promise.all([loadHealthStats(), loadTodayData()])
   } catch {
     toast.add({ title: '加载数据失败', color: 'error' })
   } finally {
@@ -151,43 +131,85 @@ const loadUserData = async () => {
 
 // 加载健康统计数据
 const loadHealthStats = async () => {
-  if (!userInfo.value.userID || !tokenCookie.value) return
+  if (!userInfo.value?.userID || !tokenCookie.value) return
 
   const headers = { Authorization: `Bearer ${tokenCookie.value}` }
-  const fetchTotal = (url: string) =>
-    $fetch<{ code: number; data: { total: number } }>(url, {
-      method: 'GET',
+  const responses = await Promise.allSettled(
+    HEALTH_ENDPOINTS.map(({ key, url }) =>
+      $fetch<{ code: number; data: { total: number } }>(url, {
+        headers,
+        params: { userID: userInfo.value!.userID, page: 1, pageSize: 1 }
+      }).then((res) => ({ key, total: res.code === 1 ? res.data.total || 0 : 0 }))
+    )
+  )
+
+  responses.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      healthStats.totalRecords[result.value.key] = result.value.total
+    }
+  })
+}
+
+// 加载今日实际数据
+const loadTodayData = async () => {
+  if (!userInfo.value?.userID || !tokenCookie.value) return
+
+  const headers = { Authorization: `Bearer ${tokenCookie.value}` }
+  const today = dateValueToString(getTodayDateValue())
+  const params = {
+    userID: userInfo.value.userID,
+    startDate: today,
+    endDate: today,
+    page: 1,
+    pageSize: 1000
+  }
+
+  const [bodyRes, dietRes, exerciseRes, sleepRes] = await Promise.allSettled([
+    // 获取最新体重记录（不限于今日）
+    $fetch<{ data: { rows: BodyData[] } }>('/api/body-metrics', {
       headers,
       params: { userID: userInfo.value.userID, page: 1, pageSize: 1 }
-    }).catch(() => ({ code: 0, data: { total: 0 } }))
+    }),
+    $fetch<{ data: { rows: DietRecord[] } }>('/api/diet-items', { headers, params }),
+    $fetch<{ data: { rows: ExerciseRecord[] } }>('/api/exercise-items', { headers, params }),
+    $fetch<{ data: { rows: SleepRecord[] } }>('/api/sleep-items', { headers, params })
+  ])
 
-  try {
-    const responses = await Promise.all(HEALTH_ENDPOINTS.map(({ url }) => fetchTotal(url)))
-    HEALTH_ENDPOINTS.forEach((endpoint, index) => {
-      const res = responses[index]
-      if (res) healthStats.totalRecords[endpoint.key] = res.code === 1 ? res.data.total || 0 : 0
-    })
-  } catch {
-    // 忽略错误处理
+  if (bodyRes.status === 'fulfilled')
+    todayData.weight = bodyRes.value.data.rows[0]?.weightKG || null
+  if (dietRes.status === 'fulfilled') {
+    todayData.calories = dietRes.value.data.rows.reduce((s, i) => s + (i.estimatedCalories || 0), 0)
+  }
+  if (exerciseRes.status === 'fulfilled') {
+    todayData.caloriesBurned = exerciseRes.value.data.rows.reduce(
+      (s, i) => s + (i.estimatedCaloriesBurned || 0),
+      0
+    )
+  }
+  if (sleepRes.status === 'fulfilled') {
+    const minutes = sleepRes.value.data.rows.reduce((sum, item) => {
+      if (!item.bedTime || !item.wakeTime) return sum
+      const diff = new Date(item.wakeTime).getTime() - new Date(item.bedTime).getTime()
+      return sum + (diff > 0 ? diff / 60000 : 0)
+    }, 0)
+    todayData.sleepHours = minutes / 60
   }
 }
 
 // 编辑基本信息
 const editBasicInfo = () => {
   Object.assign(editForm, {
-    nickname: userInfo.value.nickname || '',
-    gender: userInfo.value.gender || '',
-    dateOfBirth: userInfo.value.dateOfBirth || ''
+    nickname: userInfo.value?.nickname || '',
+    gender: userInfo.value?.gender || '',
+    dateOfBirth: userInfo.value?.dateOfBirth || ''
   })
   Object.assign(passwordForm, { newPassword: '', confirmPassword: '' })
 
-  if (userInfo.value.dateOfBirth) {
-    try {
-      const [year, month, day] = userInfo.value.dateOfBirth.split('-').map(Number)
-      if (year && month && day) calendarValue.value = createCalendarDate(year, month, day)
-    } catch {
-      calendarValue.value = getTodayDateValue()
-    }
+  const dob = userInfo.value?.dateOfBirth
+  if (dob) {
+    const [year, month, day] = dob.split('-').map(Number)
+    calendarValue.value =
+      year && month && day ? new CalendarDate(year, month, day) : getTodayDateValue()
   } else {
     calendarValue.value = getTodayDateValue()
   }
@@ -239,7 +261,7 @@ const updatePassword = async () => {
     toast.add({ title: '两次输入的密码不一致', color: 'error' })
     return
   }
-  if (!userInfo.value.nickname || !userInfo.value.email) {
+  if (!userInfo.value?.nickname || !userInfo.value?.email) {
     toast.add({ title: '缺少昵称或邮箱，无法修改密码', color: 'error' })
     return
   }
@@ -274,69 +296,53 @@ const saveGoals = async () => {
       min: 200,
       max: 3000,
       msg: '每日卡路里消耗目标应在 200-3000 kcal 之间'
-    }
+    },
+    { value: goalsForm.dailySleepHours, min: 4, max: 12, msg: '每日睡眠目标应在 4-12 小时之间' }
   ]
 
-  for (const { value, min, max, msg } of validations) {
-    if (value !== null && (value < min || value > max)) {
-      toast.add({ title: msg, color: 'error' })
-      return
-    }
+  const invalid = validations.find(
+    ({ value, min, max }) => value !== null && (value < min || value > max)
+  )
+  if (invalid) {
+    toast.add({ title: invalid.msg, color: 'error' })
+    return
   }
 
-  try {
-    Object.assign(goals, goalsForm)
-    if (import.meta.client) {
-      localStorage.setItem('healthGoals', JSON.stringify(goals))
-    }
-    showGoalsDialog.value = false
-    toast.add({ title: '设置成功', description: '健康目标已更新', color: 'success' })
-  } catch {
-    toast.add({ title: '保存失败', color: 'error' })
-  }
+  Object.assign(goals, goalsForm)
+  localStorage.setItem('healthGoals', JSON.stringify(goals))
+  showGoalsDialog.value = false
+  toast.add({ title: '设置成功', description: '健康目标已更新', color: 'success' })
 }
 
-const calculateProgress = (current: number, target: number | null) =>
+const calcProgress = (current: number, target: number | null) =>
   target ? Math.min(100, (current / target) * 100) : 0
 
 const caloriesIntakeProgress = computed(() =>
-  calculateProgress(todayCalories.value, goals.dailyCaloriesIntake)
+  calcProgress(todayData.calories, goals.dailyCaloriesIntake)
 )
 const caloriesBurnProgress = computed(() =>
-  calculateProgress(todayCaloriesBurned.value, goals.dailyCaloriesBurn)
+  calcProgress(todayData.caloriesBurned, goals.dailyCaloriesBurn)
 )
+const sleepProgress = computed(() => calcProgress(todayData.sleepHours, goals.dailySleepHours))
 
-const getProgressColor = (percentage: number) => {
-  if (percentage >= 85) return 'success'
-  if (percentage >= 60) return 'warning'
-  return 'error'
-}
+const getProgressColor = (p: number) => (p >= 85 ? 'success' : p >= 60 ? 'warning' : 'error')
 
 const getWeightColor = () => {
-  if (!currentWeight.value || !goals.targetWeight) return 'text-gray-900'
-  const errorPercentage =
-    (Math.abs(currentWeight.value - goals.targetWeight) / goals.targetWeight) * 100
-  if (errorPercentage <= 5) return 'text-green-600'
-  if (errorPercentage <= 40) return 'text-yellow-600'
-  return 'text-red-600'
+  if (!todayData.weight || !goals.targetWeight) return 'text-gray-900'
+  const diff = (Math.abs(todayData.weight - goals.targetWeight) / goals.targetWeight) * 100
+  return diff <= 5 ? 'text-green-600' : diff <= 40 ? 'text-yellow-600' : 'text-red-600'
 }
+
+const currentWeight = computed(() => todayData.weight)
 
 onMounted(() => {
   loadUserData()
 
-  if (import.meta.client) {
-    try {
-      const savedGoals = localStorage.getItem('healthGoals')
-      if (savedGoals) {
-        const parsed = JSON.parse(savedGoals)
-        if (parsed.targetWeight !== null) goals.targetWeight = parsed.targetWeight
-        if (parsed.dailyCaloriesIntake !== null)
-          goals.dailyCaloriesIntake = parsed.dailyCaloriesIntake
-        if (parsed.dailyCaloriesBurn !== null) goals.dailyCaloriesBurn = parsed.dailyCaloriesBurn
-      }
-    } catch {
-      // 忽略加载错误
-    }
+  try {
+    const saved = localStorage.getItem('healthGoals')
+    if (saved) Object.assign(goals, JSON.parse(saved))
+  } catch {
+    // Ignore errors
   }
 })
 </script>
@@ -413,7 +419,7 @@ onMounted(() => {
               <div class="flex flex-col items-center gap-3 md:w-1/3">
                 <UAvatar
                   v-bind="avatarUrl ? { src: avatarUrl } : {}"
-                  :alt="userInfo.nickname"
+                  :alt="userInfo?.nickname || '用户头像'"
                   size="3xl"
                   icon="heroicons:user"
                   class="ring-2 ring-gray-200 dark:ring-gray-700"
@@ -464,10 +470,10 @@ onMounted(() => {
               <div class="flex-1 space-y-4 md:w-2/3 md:border-l md:pl-6">
                 <div
                   v-for="item in [
-                    { label: '邮箱', value: userInfo.email },
-                    { label: '昵称', value: userInfo.nickname },
-                    { label: '性别', value: userInfo.gender },
-                    { label: '出生日期', value: formatDate(userInfo.dateOfBirth) }
+                    { label: '邮箱', value: userInfo?.email },
+                    { label: '昵称', value: userInfo?.nickname },
+                    { label: '性别', value: userInfo?.gender },
+                    { label: '出生日期', value: formatDate(userInfo?.dateOfBirth) }
                   ]"
                   :key="item.label"
                   class="flex items-center justify-between"
@@ -518,6 +524,7 @@ onMounted(() => {
                     goalsForm.targetWeight = goals.targetWeight
                     goalsForm.dailyCaloriesIntake = goals.dailyCaloriesIntake
                     goalsForm.dailyCaloriesBurn = goals.dailyCaloriesBurn
+                    goalsForm.dailySleepHours = goals.dailySleepHours
                     showGoalsDialog = true
                   }
                 "
@@ -528,10 +535,24 @@ onMounted(() => {
           </template>
 
           <div class="space-y-6">
+            <!-- 目标体重 -->
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium">目标体重（kg）</span>
+                <div class="flex items-baseline gap-2">
+                  <span class="text-lg font-bold" :class="getWeightColor()">
+                    {{ currentWeight?.toFixed(1) }}
+                  </span>
+                  <span>/</span>
+                  <span class="text-lg font-bold"> {{ goals.targetWeight?.toFixed(1) }} kg </span>
+                </div>
+              </div>
+            </div>
+
             <!-- 卡路里摄入目标 -->
             <div>
               <div class="mb-2 flex items-center justify-between">
-                <span class="text-sm font-medium">每日卡路里摄入目标</span>
+                <span class="text-sm font-medium">每日卡路里摄入目标（kcal）</span>
                 <span class="text-sm font-bold"> {{ goals.dailyCaloriesIntake }} kcal </span>
               </div>
               <UProgress
@@ -544,7 +565,7 @@ onMounted(() => {
             <!-- 卡路里消耗目标 -->
             <div>
               <div class="mb-2 flex items-center justify-between">
-                <span class="text-sm font-medium">每日卡路里消耗目标</span>
+                <span class="text-sm font-medium">每日卡路里消耗目标（kcal）</span>
                 <span class="text-sm font-bold"> {{ goals.dailyCaloriesBurn }} kcal </span>
               </div>
               <UProgress
@@ -554,18 +575,17 @@ onMounted(() => {
               />
             </div>
 
-            <!-- 目标体重 -->
+            <!-- 每日睡眠目标 -->
             <div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium">目标体重</span>
-                <div class="flex items-baseline gap-2">
-                  <span class="text-lg font-bold" :class="getWeightColor()">
-                    {{ currentWeight?.toFixed(1) }}
-                  </span>
-                  <span>/</span>
-                  <span class="text-lg font-bold"> {{ goals.targetWeight?.toFixed(1) }} kg </span>
-                </div>
+              <div class="mb-2 flex items-center justify-between">
+                <span class="text-sm font-medium">每日睡眠目标（小时）</span>
+                <span class="text-sm font-bold"> {{ goals.dailySleepHours }} 小时 </span>
               </div>
+              <UProgress
+                :model-value="sleepProgress"
+                :color="getProgressColor(sleepProgress)"
+                size="md"
+              />
             </div>
           </div>
         </UCard>
@@ -801,8 +821,18 @@ onMounted(() => {
       <template #body="{ close }">
         <div class="space-y-4">
           <div>
+            <label for="goal-weight" class="mb-2 block text-sm font-medium">目标体重（kg）</label>
+            <UInput
+              id="goal-weight"
+              v-model.number="goalsForm.targetWeight"
+              type="number"
+              step="0.1"
+              placeholder="请输入目标体重"
+            />
+          </div>
+          <div>
             <label for="goal-calories-intake" class="mb-2 block text-sm font-medium"
-              >每日卡路里摄入目标 (kcal)</label
+              >每日卡路里摄入目标（kcal）</label
             >
             <UInput
               id="goal-calories-intake"
@@ -813,7 +843,7 @@ onMounted(() => {
           </div>
           <div>
             <label for="goal-calories-burn" class="mb-2 block text-sm font-medium"
-              >每日卡路里消耗目标 (kcal)</label
+              >每日卡路里消耗目标（kcal）</label
             >
             <UInput
               id="goal-calories-burn"
@@ -823,13 +853,15 @@ onMounted(() => {
             />
           </div>
           <div>
-            <label for="goal-weight" class="mb-2 block text-sm font-medium">目标体重 (kg)</label>
+            <label for="goal-sleep" class="mb-2 block text-sm font-medium">
+              每日睡眠目标（小时）
+            </label>
             <UInput
-              id="goal-weight"
-              v-model.number="goalsForm.targetWeight"
+              id="goal-sleep"
+              v-model.number="goalsForm.dailySleepHours"
               type="number"
-              step="0.1"
-              placeholder="请输入目标体重"
+              step="0.5"
+              placeholder="请输入每日睡眠目标"
             />
           </div>
 
@@ -840,8 +872,5 @@ onMounted(() => {
         </div>
       </template>
     </UModal>
-
-    <!-- AI 聊天面板 -->
-    <AIChatPalette v-model:open="showAIChatPalette" />
   </UPage>
 </template>

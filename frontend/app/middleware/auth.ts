@@ -4,29 +4,11 @@ export default defineNuxtRouteMiddleware((to) => {
 
   const token = useCookie('token')
   const userID = useCookie('userID')
+  const isAuthenticated = !!(token.value && userID.value)
 
-  const isAuthenticated = computed(() => !!(token.value && userID.value))
-  const publicRoutes = ['/login', '/register', '/']
-
-  // 如果是公开路由且未登录，直接放行
-  if (publicRoutes.includes(to.path) && !isAuthenticated.value) {
-    return
-  }
-
-  // 已登录用户重定向到 dashboard
-  if (publicRoutes.includes(to.path) && to.path !== '/' && isAuthenticated.value) {
-    return navigateTo('/dashboard', { replace: true })
-  }
-
-  if (to.path === '/') {
-    if (isAuthenticated.value) {
-      return navigateTo('/dashboard', { replace: true })
-    }
-    return
-  }
-
-  if (!isAuthenticated.value) {
-    return navigateTo('/login', { replace: true })
+  // 已登录访问公开路由 → dashboard，未登录访问受保护路由 → login
+  if (isAuthenticated === ['/', '/login', '/register'].includes(to.path)) {
+    return navigateTo(isAuthenticated ? '/dashboard' : '/login', { replace: true })
   }
 
   // token 有效性验证由 auth.client.ts 插件的路由守卫处理

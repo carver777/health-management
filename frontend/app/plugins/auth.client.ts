@@ -1,6 +1,5 @@
 /**
- * 认证插件 - 非阻塞式加载
- * 只在必要时才验证 token，避免首屏加载被阻塞
+ * 认证插件 - 非阻塞式加载，避免首屏加载被阻塞
  */
 export default defineNuxtPlugin(() => {
   const { fetchUserProfile, logout } = useAuth()
@@ -24,7 +23,7 @@ export default defineNuxtPlugin(() => {
         }
       }
     } catch {
-      // 忽略缓存加载错误
+      // 忽略加载错误
     }
   }
 

@@ -2,89 +2,46 @@
 import type { ColumnDef } from '@tanstack/vue-table'
 import type { DateValue } from '@internationalized/date'
 
-type TableColumn<T> = ColumnDef<T>
-
-interface PageInfo {
-  current: number
-  size: number
-  total: number
-}
-
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
 
 const toast = useToast()
-const showAIChatPalette = ref(false)
-
 const sleepList = ref<SleepRecord[]>([])
 const todaySleepList = ref<SleepRecord[]>([])
 const loading = ref(false)
 const showDialog = ref(false)
 const editingItem = ref<SleepRecord | null>(null)
 
-const pageInfo = reactive<PageInfo>({
+const pageInfo = reactive({
   current: 1,
   size: 10,
   total: 0
 })
 
-const startDateCalendar = shallowRef<DateValue | null>(null)
-const endDateCalendar = shallowRef<DateValue | null>(null)
-
+const dateRange = shallowRef<{ start: DateValue; end: DateValue } | null>(null)
 const healthGoals = reactive({ dailySleepHours: null as number | null })
 
 const loadHealthGoals = () => {
   if (!import.meta.client) return
   const saved = localStorage.getItem('healthGoals')
-  if (!saved) return
-  try {
-    const parsed = JSON.parse(saved)
-    healthGoals.dailySleepHours = parsed.dailySleepHours ?? null
-  } catch {
-    healthGoals.dailySleepHours = null
-  }
+  if (saved) healthGoals.dailySleepHours = JSON.parse(saved).dailySleepHours
 }
 
-// 计算单条记录的分钟数，用于多处统计
 const getSleepDurationMinutes = (record: SleepRecord): number => {
   if (!record.bedTime || !record.wakeTime) return 0
-  const bed = new Date(record.bedTime)
-  const wake = new Date(record.wakeTime)
-  if (Number.isNaN(bed.getTime()) || Number.isNaN(wake.getTime())) return 0
-  return Math.max(0, Math.round((wake.getTime() - bed.getTime()) / 60000))
+  return calculateMinutesBetween(record.bedTime, record.wakeTime)
 }
 
-// 将分钟值格式化成人类可读的小时+分钟
-const formatDuration = (minutes: number): string => {
-  if (!minutes) return '--'
-  const hours = Math.floor(minutes / 60)
-  const mins = minutes % 60
-  return `${hours} 小时 ${mins} 分`
-}
-
-// 为列表提供统一的日期时间展示
-const formatDateTimeDisplay = (value?: string | null): string => {
-  if (!value) return '--'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  })
-}
-
-// 今日指标
-const todaySleepMinutes = computed(() => {
-  return todaySleepList.value.reduce((sum, item) => sum + getSleepDurationMinutes(item), 0)
+const todayStats = computed(() => {
+  const minutes = todaySleepList.value.reduce((sum, item) => sum + getSleepDurationMinutes(item), 0)
+  return {
+    minutes,
+    hoursDisplay: (minutes / 60).toFixed(1)
+  }
 })
 
-const todaySleepHoursDisplay = computed(() => (todaySleepMinutes.value / 60).toFixed(1))
-const todaySleepSessions = computed(() => todaySleepList.value.length)
-
-// 列表中的平均数用于卡片展示
 const averageSleepMinutes = computed(() => {
   if (!sleepList.value.length) return 0
   const totalMinutes = sleepList.value.reduce((sum, item) => sum + getSleepDurationMinutes(item), 0)
@@ -92,16 +49,7 @@ const averageSleepMinutes = computed(() => {
   return Math.round(totalMinutes / validCount)
 })
 
-const goalCompletion = computed(() => {
-  if (!healthGoals.dailySleepHours || !todaySleepMinutes.value) return '--'
-  const targetMinutes = healthGoals.dailySleepHours * 60
-  if (!targetMinutes) return '--'
-  const ratio = Math.min(100, Math.round((todaySleepMinutes.value / targetMinutes) * 100))
-  return `${ratio}%`
-})
-
-// 表格列配置，尽量复用上面的格式化工具
-const columns: TableColumn<SleepRecord>[] = [
+const columns: ColumnDef<SleepRecord>[] = [
   {
     accessorKey: 'recordDate',
     header: '记录日期',
@@ -143,7 +91,7 @@ const columns: TableColumn<SleepRecord>[] = [
                 classes: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
               }
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'font-semibold text-primary-600' }, formatDuration(minutes)),
+        h('span', { class: 'font-semibold text-primary-600' }, formatDurationMinutes(minutes)),
         h(
           'span',
           { class: `rounded-md px-2 py-0.5 text-xs font-medium ${badge.classes}` },
@@ -177,11 +125,6 @@ const columns: TableColumn<SleepRecord>[] = [
   }
 ]
 
-const formatDate = (date: DateValue | null, placeholder: string): string => {
-  return date ? dateValueToString(date) : placeholder
-}
-
-// 分页查询睡眠记录，并支持日期筛选
 const loadData = async () => {
   loading.value = true
   try {
@@ -198,25 +141,29 @@ const loadData = async () => {
       userID: userID.value
     }
 
-    if (startDateCalendar.value || endDateCalendar.value) {
-      const startStr = startDateCalendar.value ? dateValueToString(startDateCalendar.value) : null
-      const endStr = endDateCalendar.value
-        ? dateValueToString(endDateCalendar.value)
-        : dateValueToString(getTodayDateValue())
-
-      if (startStr && endStr) {
-        if (startStr > endStr) {
-          toast.add({
-            title: '日期范围错误',
-            description: '开始日期不能晚于结束日期',
-            color: 'error'
-          })
-          loading.value = false
-          return
-        }
-        params.startDate = startStr
-        params.endDate = endStr
+    if (dateRange.value && (dateRange.value.start || dateRange.value.end)) {
+      if (!dateRange.value.start || !dateRange.value.end) {
+        toast.add({
+          title: '日期范围不完整',
+          description: '请填写完整的日期范围',
+          color: 'error'
+        })
+        loading.value = false
+        return
       }
+      const startStr = dateValueToString(dateRange.value.start)
+      const endStr = dateValueToString(dateRange.value.end)
+      if (startStr > endStr) {
+        toast.add({
+          title: '日期范围错误',
+          description: '开始日期不能晚于结束日期',
+          color: 'error'
+        })
+        loading.value = false
+        return
+      }
+      params.startDate = startStr
+      params.endDate = endStr
     }
 
     const response = await $fetch<{ code: number; data: { rows: SleepRecord[]; total: number } }>(
@@ -245,7 +192,6 @@ const loadData = async () => {
   }
 }
 
-// 单独查询今日数据供统计卡片使用
 const loadTodayData = async () => {
   try {
     const userID = useCookie('userID')
@@ -298,7 +244,6 @@ const handleDialogSuccess = () => {
   loadTodayData()
 }
 
-// 删除单条记录后刷新列表与今日统计
 const deleteItem = async (item: SleepRecord) => {
   if (!item.sleepItemID) return
 
@@ -331,8 +276,7 @@ const deleteItem = async (item: SleepRecord) => {
 }
 
 const resetFilter = () => {
-  startDateCalendar.value = null
-  endDateCalendar.value = null
+  dateRange.value = null
   pageInfo.current = 1
   loadData()
 }
@@ -358,14 +302,14 @@ onMounted(() => {
     </UPageHeader>
 
     <UPageBody>
-      <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div class="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
               <UIcon name="mdi:moon-waning-crescent" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todaySleepHoursDisplay }}</div>
+              <div class="text-3xl font-bold">{{ todayStats.hoursDisplay }}</div>
               <div class="text-sm">今日睡眠时长（小时）</div>
               <div class="text-xs">
                 目标:
@@ -378,25 +322,11 @@ onMounted(() => {
         <UCard>
           <div class="flex items-center gap-4">
             <div class="p-3">
-              <UIcon name="mdi:counter" class="text-3xl" />
-            </div>
-            <div class="flex-1">
-              <div class="text-3xl font-bold">{{ todaySleepSessions }}</div>
-              <div class="text-sm">今日睡眠记录次数</div>
-              <div class="text-xs">记录完整的睡眠段越多，分析越准确</div>
-            </div>
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center gap-4">
-            <div class="p-3">
               <UIcon name="mdi:chart-areaspline" class="text-3xl" />
             </div>
             <div class="flex-1">
-              <div class="text-3xl font-bold">{{ formatDuration(averageSleepMinutes) }}</div>
-              <div class="text-sm">平均睡眠时长</div>
-              <div class="text-xs">今日目标达成率: {{ goalCompletion }}</div>
+              <div class="text-3xl font-bold">{{ formatDurationMinutes(averageSleepMinutes) }}</div>
+              <div class="text-sm">平均睡眠时长（小时）</div>
             </div>
           </div>
         </UCard>
@@ -413,32 +343,22 @@ onMounted(() => {
         </template>
 
         <div class="flex flex-wrap gap-4">
+          <!-- 日期范围 -->
           <div class="min-w-[200px] flex-1">
-            <label for="sleep-filter-start-date" class="mb-2 block text-sm font-medium">
-              开始日期
-            </label>
-            <DatePicker
-              id="sleep-filter-start-date"
-              v-model="startDateCalendar"
-              block
-              :placeholder="formatDate(startDateCalendar, '选择开始日期')"
+            <label for="sleep-filter-date-range" class="mb-2 block text-sm font-medium"
+              >日期范围</label
+            >
+            <UInputDate
+              id="sleep-filter-date-range"
+              v-model="dateRange"
+              range
+              icon="heroicons:calendar"
+              class="w-full"
               @update:model-value="loadData"
             />
           </div>
 
-          <div class="min-w-[200px] flex-1">
-            <label for="sleep-filter-end-date" class="mb-2 block text-sm font-medium">
-              结束日期
-            </label>
-            <DatePicker
-              id="sleep-filter-end-date"
-              v-model="endDateCalendar"
-              block
-              :placeholder="formatDate(endDateCalendar, '选择结束日期')"
-              @update:model-value="loadData"
-            />
-          </div>
-
+          <!-- 重置按钮 -->
           <div class="flex items-end">
             <UButton color="neutral" variant="outline" @click="resetFilter">
               <template #leading>
@@ -489,8 +409,6 @@ onMounted(() => {
         :edit-item="editingItem"
         @success="handleDialogSuccess"
       />
-
-      <AIChatPalette v-model:open="showAIChatPalette" />
     </UPageBody>
   </UPage>
 </template>

@@ -8,13 +8,11 @@ interface Props {
   editItem?: BodyData | null
 }
 
-interface Emits {
-  (e: 'update:open', value: boolean): void
-  (e: 'success'): void
-}
-
 const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  success: []
+}>()
 
 const toast = useToast()
 const isOpen = computed({
@@ -25,7 +23,7 @@ const isOpen = computed({
 // 日历状态
 const calendarValue = shallowRef<DateValue>(getTodayDateValue())
 
-// 表单验证 Schema
+// 表单验证
 const schema = z.object({
   heightCM: z
     .number({ message: '请输入身高' })
@@ -50,6 +48,14 @@ const submitting = ref(false)
 const isEditMode = computed(() => !!props.editItem)
 const dialogTitle = '快速记录身体数据'
 
+// 获取认证信息
+const getAuthHeaders = () => {
+  const token = useCookie('token')
+  const userID = useCookie('userID')
+  if (!token.value || !userID.value) return null
+  return { token: token.value, userID: userID.value }
+}
+
 // 加载用户最新的身体数据或编辑数据
 const loadLatestData = async () => {
   // 如果是编辑模式，填充现有数据
@@ -62,32 +68,23 @@ const loadLatestData = async () => {
 
   // 新增模式，加载最新数据
   try {
-    const token = useCookie('token')
-    const userID = useCookie('userID')
-    if (!token.value || !userID.value) {
+    const auth = getAuthHeaders()
+    if (!auth) {
       resetFormWithDefaults()
       return
     }
 
     const response = await $fetch<ApiResponse<{ rows: BodyData[] }>>('/api/body-metrics', {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      },
-      query: {
-        page: 1,
-        pageSize: 1,
-        userID: userID.value
-      }
+      headers: { Authorization: `Bearer ${auth.token}` },
+      query: { page: 1, pageSize: 1, userID: auth.userID }
     })
 
-    if (response?.success && response.data?.rows && response.data.rows.length > 0) {
-      const latestRecord = response.data.rows[0]
-      if (latestRecord) {
-        state.heightCM = latestRecord.heightCM || 170
-        state.weightKG = latestRecord.weightKG || 65
-        calendarValue.value = getTodayDateValue()
-      }
+    const latestRecord = response?.data?.rows?.[0]
+    if (latestRecord) {
+      state.heightCM = latestRecord.heightCM || 170
+      state.weightKG = latestRecord.weightKG || 65
+      calendarValue.value = getTodayDateValue()
     } else {
       resetFormWithDefaults()
     }
@@ -102,33 +99,28 @@ const resetFormWithDefaults = () => {
   calendarValue.value = getTodayDateValue()
 }
 
-// 监听对话框打开
 watch(isOpen, (val) => {
   if (val) {
     loadLatestData()
   }
 })
 
-// BMI 计算
 const bmiValue = computed(() => calcBMI({ heightCM: state.heightCM, weightKG: state.weightKG }))
-const bmiStatus = computed(() => {
-  if (bmiValue.value === null) return { status: '', color: '' }
-  return getBMIStatus(bmiValue.value)
-})
+const bmiStatus = computed(() =>
+  bmiValue.value === null ? { status: '', color: '' } : getBMIStatus(bmiValue.value)
+)
 
-// 健康提示
+const healthTips: Record<string, string> = {
+  low: '您的 BMI 偏低，建议您适当增加营养摄入，进行力量训练',
+  high: '您的 BMI 偏高，建议您控制饮食，增加有氧运动',
+  veryHigh: '您的 BMI 过高，建议您制定减重计划，必要时咨询专业医生'
+}
+
 const healthTip = computed(() => {
   if (bmiValue.value === null) return ''
-
-  if (bmiValue.value < 18.5) {
-    return '您的 BMI 偏低，建议您适当增加营养摄入，进行力量训练'
-  }
-  if (bmiValue.value >= 24 && bmiValue.value < 28) {
-    return '您的 BMI 偏高，建议您控制饮食，增加有氧运动'
-  }
-  if (bmiValue.value >= 28) {
-    return '您的 BMI 过高，建议您制定减重计划，必要时咨询专业医生'
-  }
+  if (bmiValue.value < 18.5) return healthTips.low
+  if (bmiValue.value >= 24 && bmiValue.value < 28) return healthTips.high
+  if (bmiValue.value >= 28) return healthTips.veryHigh
   return ''
 })
 
@@ -137,34 +129,27 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
   submitting.value = true
 
   try {
-    const token = useCookie('token')
-    const userID = useCookie('userID')
-
-    if (!token.value || !userID.value) {
+    const auth = getAuthHeaders()
+    if (!auth) {
       toast.add({ title: '请先登录', color: 'error' })
       return
     }
 
     const recordDate = dateValueToString(calendarValue.value)
-
     const formData: BodyDataRequest = {
-      userID: userID.value,
+      userID: auth.userID,
       heightCM: event.data.heightCM,
       weightKG: event.data.weightKG,
       recordDate
     }
 
+    const headers = { Authorization: `Bearer ${auth.token}` }
+
     if (isEditMode.value && props.editItem?.bodyMetricID) {
       // 编辑模式：直接更新
       const response = await $fetch<{ code: number; msg?: string }>(
         `/api/body-metrics/${props.editItem.bodyMetricID}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token.value}`
-          },
-          body: formData
-        }
+        { method: 'PUT', headers, body: formData }
       )
 
       if (response.code === 1) {
@@ -176,62 +161,38 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       }
     } else {
       // 新增模式：检查当天是否已有记录
-      const todayRecords = await $fetch<{
-        code: number
-        data: { rows: BodyData[]; total: number }
-      }>('/api/body-metrics', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token.value}`
-        },
-        params: {
-          page: 1,
-          pageSize: 10,
-          userID: userID.value,
-          startDate: recordDate,
-          endDate: recordDate
+      const todayRecords = await $fetch<{ code: number; data: { rows: BodyData[] } }>(
+        '/api/body-metrics',
+        {
+          method: 'GET',
+          headers,
+          params: {
+            page: 1,
+            pageSize: 10,
+            userID: auth.userID,
+            startDate: recordDate,
+            endDate: recordDate
+          }
         }
+      )
+
+      const existingRecord = todayRecords?.data?.rows?.[0]
+      const url = existingRecord?.bodyMetricID
+        ? `/api/body-metrics/${existingRecord.bodyMetricID}`
+        : '/api/body-metrics'
+      const method = existingRecord?.bodyMetricID ? 'PUT' : 'POST'
+
+      const response = await $fetch<{ code: number; msg?: string }>(url, {
+        method,
+        headers,
+        body: formData
       })
 
-      let response
-      if (
-        todayRecords?.code === 1 &&
-        todayRecords.data?.rows &&
-        todayRecords.data.rows.length > 0
-      ) {
-        const existingRecord = todayRecords.data.rows[0]
-        if (existingRecord && existingRecord.bodyMetricID) {
-          // 更新已有记录
-          response = await $fetch<{ code: number; msg?: string }>(
-            `/api/body-metrics/${existingRecord.bodyMetricID}`,
-            {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${token.value}`
-              },
-              body: formData
-            }
-          )
-        }
-      } else {
-        // 创建新记录
-        response = await $fetch<{ code: number; msg?: string; data?: number }>(
-          '/api/body-metrics',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token.value}`
-            },
-            body: formData
-          }
-        )
-      }
-
-      if (response && response.code === 1) {
+      if (response.code === 1) {
         toast.add({ title: '记录成功', color: 'success' })
         emit('success')
         isOpen.value = false
-      } else if (response) {
+      } else {
         toast.add({ title: response.msg || '记录失败', color: 'error' })
       }
     }
@@ -265,6 +226,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               :min="100"
               :max="250"
               :step="0.5"
+              class="w-full"
             >
               <template #trailing>
                 <span class="text-xs">cm</span>
@@ -280,6 +242,7 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
               :min="30"
               :max="300"
               :step="0.1"
+              class="w-full"
             >
               <template #trailing>
                 <span class="text-xs">kg</span>
@@ -289,10 +252,9 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
         </div>
 
         <UFormField label="记录日期" name="recordDate">
-          <DatePicker v-model="calendarValue" block />
+          <DatePicker v-model="calendarValue" class="w-full" />
         </UFormField>
 
-        <!-- BMI 预览 -->
         <UCard v-if="bmiValue !== null">
           <div class="flex flex-col gap-3">
             <div class="flex items-center justify-between">
@@ -317,7 +279,6 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
           </div>
         </UCard>
 
-        <!-- 健康提示 -->
         <UAlert
           v-if="healthTip"
           icon="heroicons:information-circle"

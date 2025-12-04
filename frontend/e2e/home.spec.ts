@@ -18,7 +18,7 @@ test.describe('首页功能测试', () => {
   })
 
   test('应该显示描述文字', async ({ page }) => {
-    const description = page.getByText('用科学的方法管理您的健康')
+    const description = page.getByText('用科学的方法管理您的健康，让生活更美好')
     await expect(description).toBeVisible()
   })
 
@@ -34,11 +34,20 @@ test.describe('首页功能测试', () => {
     const featuresHeading = page.getByRole('heading', { name: '核心功能' })
     await expect(featuresHeading).toBeVisible()
 
-    const features = ['数据可视化', '饮食管理', '运动跟踪', '睡眠管理', '体重监测', 'AI 健康助手']
+    const features = [
+      '数据可视化',
+      '饮食管理',
+      '运动跟踪',
+      '睡眠管理',
+      '体重监测',
+      'AI 健康助手',
+      '健康目标'
+    ]
     for (const feature of features) {
       const featureHeading = page.getByRole('heading', { name: feature, level: 3 })
       await expect(featureHeading).toBeVisible()
     }
+    await expect(page.getByRole('heading', { level: 3 })).toHaveCount(features.length)
   })
 
   test('点击登录按钮应该导航到登录页面', async ({ page }) => {

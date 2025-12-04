@@ -9,7 +9,7 @@ const minValue = defineModel<DateValue>('minValue', { default: new CalendarDate(
 const maxValue = defineModel<DateValue>('maxValue')
 const isOpen = toRef(false)
 
-const { formatYear, formatMonth } = useCustomFormatter(placeholder, 'zh-CN')
+const { formatYear, formatMonth } = useCustomFormatter(placeholder)
 const { selectedMode, toggleSelectMode } = useSelectMode()
 const {
   displayedYear,
@@ -35,8 +35,8 @@ const { selectYear, canSelectYear } = useYearSelect(displayedYear, minValue, max
 
 function handlePopoverOpen(value: boolean) {
   /**
-   * reset displayed year when popover opens
-   * changing the value while the popover closes will be noticible
+   * 当弹出层打开时重置显示的年份
+   * 在弹出层关闭时更改值会比较明显
    */
   if (value) {
     resetDisplayedYear()
@@ -45,17 +45,17 @@ function handlePopoverOpen(value: boolean) {
 }
 
 watch(selectedMode, (newValue: 'month' | 'year') => {
-  // reset the displayed year range when the mode is changed
+  // 当模式改变时重置显示的年份范围
   if (newValue === 'year') {
     resetDisplayedYearRange()
   }
 })
 
 /**
- * Custom formatters for month and year
+ * 自定义月份和年份格式化器
  */
 function useCustomFormatter(placeholder: Ref<DateValue>, locale?: string) {
-  const formatter = useDateFormatter(locale ?? 'en')
+  const formatter = useDateFormatter(locale ?? 'zh-CN')
 
   const defaultFormatterOptions = computed(() => {
     return {
@@ -86,7 +86,7 @@ function useCustomFormatter(placeholder: Ref<DateValue>, locale?: string) {
 }
 
 /**
- * Selection mode (month or year)
+ * 选择模式（月份或年份）
  */
 function useSelectMode() {
   type SelectMode = 'year' | 'month'
@@ -101,7 +101,7 @@ function useSelectMode() {
 }
 
 /**
- * Handle month select
+ * 处理月份选择
  */
 function useMonthSelect(
   placeholder: Ref<DateValue>,
@@ -137,7 +137,7 @@ function useMonthSelect(
 }
 
 /**
- * Handle year select
+ * 处理年份选择
  */
 function useYearSelect(
   displayedYear: Ref<DateValue>,
@@ -173,13 +173,13 @@ function useYearSelect(
 }
 
 /**
- * Popover year value
+ * 弹出层年份值
  */
 function useDisplayedYear(placeholder: Ref<DateValue>) {
   const displayedYear = shallowRef(placeholder.value)
 
   /**
-   * Increase or decrease the displayed year
+   * 增加或减少显示的年份
    */
   function changeDisplayedYear(direction: 'next' | 'prev') {
     if (direction === 'next') {
@@ -192,7 +192,7 @@ function useDisplayedYear(placeholder: Ref<DateValue>) {
   }
 
   /**
-   * Reset the year that is displayed in the popover
+   * 重置弹出层中显示的年份
    */
   function resetDisplayedYear() {
     displayedYear.value = placeholder.value
@@ -227,7 +227,7 @@ function useDisplayedYear(placeholder: Ref<DateValue>) {
 }
 
 /**
- * Popover year-range value
+ * 弹出层年份范围值
  */
 function useDisplayedYearRange(
   displayedYear: Ref<DateValue>,
@@ -248,7 +248,7 @@ function useDisplayedYearRange(
   }
 
   /**
-   * Increase or decrease the displayed year range
+   * 增加或减少显示的年份范围
    */
   function changeDisplayedYearRange(direction: 'next' | 'prev') {
     yearRangeValue.value =
@@ -297,7 +297,7 @@ function useDisplayedYearRange(
     </UButton>
     <template #content>
       <template v-if="selectedMode === 'month'">
-        <!-- Month Selection -->
+        <!-- 月份选择 -->
         <div class="flex items-center justify-between gap-2">
           <UButton
             color="neutral"
@@ -342,7 +342,7 @@ function useDisplayedYearRange(
         </div>
       </template>
       <template v-else>
-        <!-- Year Selection -->
+        <!-- 年份选择 -->
         <div class="flex items-center justify-between gap-2">
           <UButton
             color="neutral"

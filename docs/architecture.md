@@ -76,7 +76,7 @@
 
 ### AI 咨询流程
 
-1. 前端 `AIChatPalette` 调起 SSE 连接 `POST /chat/stream` 并推送用户问题
+1. 前端聊天页（`pages/chat.vue`）通过 `utils/sse.ts` 封装的 SSE 客户端发起 `POST /chat/stream`，并附带当前历史对话与用户问题
 2. 后端 `ChatController` 调用 Spring AI，向 DeepSeek 发送上下文提示词，并根据模型需要依次触发 `BodyFunctions` / `SleepFunctions` / `DietFunctions` / `ExerciseFunctions` / `WebSearchFunction`
 3. 函数执行结果（例如新增某条运动记录的 ID）会回写到模型上下文，推理结果通过 SSE `data: {...}` 流持续回传
 4. SSE 层自带 60 秒超时保护，遇到请求失败会推送友好降级提示

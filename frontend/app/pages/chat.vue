@@ -23,61 +23,67 @@ const messagesContainer = ref<HTMLElement>()
 const abortController = ref<AbortController | null>(null)
 
 const CHAT_HISTORY_KEY = 'health_chat_history'
+const SUGGESTIONS = [
+  '如何制定减肥计划？',
+  '适合我的运动方案',
+  '健康饮食建议',
+  '如何改善睡眠质量？',
+  '每天需要多少热量？',
+  '推荐的锻炼频率'
+] as const
+
 const toast = useToast()
 const { getAvatarUrl } = useAvatar()
-
 const avatarUrl = computed(() => getAvatarUrl())
 
-// 配置 marked
 marked.setOptions({
   gfm: true,
   breaks: true
 })
 
-// Markdown 转换和清理
+const ALLOWED_TAGS = [
+  'p',
+  'br',
+  'strong',
+  'b',
+  'em',
+  'i',
+  'code',
+  'pre',
+  'a',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'del',
+  'ins'
+]
+const ALLOWED_ATTR = ['href', 'title', 'target', 'class', 'rel']
+
 const sanitizeHtml = (content: string) => {
-  if (!content || content.trim() === '') return ''
+  if (!content?.trim()) return ''
 
   try {
     const cleanHtml = DOMPurify.sanitize(marked.parse(content) as string, {
-      ALLOWED_TAGS: [
-        'p',
-        'br',
-        'strong',
-        'b',
-        'em',
-        'i',
-        'code',
-        'pre',
-        'a',
-        'ul',
-        'ol',
-        'li',
-        'blockquote',
-        'h1',
-        'h2',
-        'h3',
-        'h4',
-        'h5',
-        'h6',
-        'del',
-        'ins'
-      ],
-      ALLOWED_ATTR: ['href', 'title', 'target', 'class', 'rel']
+      ALLOWED_TAGS,
+      ALLOWED_ATTR
     })
 
-    if (import.meta.client) {
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = cleanHtml
-      const links = tempDiv.querySelectorAll('a')
-      links.forEach((link) => {
-        link.setAttribute('target', '_blank')
-        link.setAttribute('rel', 'noopener noreferrer')
-      })
-      return tempDiv.innerHTML
-    }
+    if (!import.meta.client) return cleanHtml
 
-    return cleanHtml
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = cleanHtml
+    tempDiv.querySelectorAll('a').forEach((link) => {
+      link.setAttribute('target', '_blank')
+      link.setAttribute('rel', 'noopener noreferrer')
+    })
+    return tempDiv.innerHTML
   } catch {
     return DOMPurify.sanitize(content, {
       ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i'],
@@ -86,33 +92,33 @@ const sanitizeHtml = (content: string) => {
   }
 }
 
-// 加载聊天历史
 const loadChatHistory = () => {
   if (!import.meta.client) return
 
   try {
-    const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY)
-    if (savedHistory) {
-      const historyData = JSON.parse(savedHistory)
-      const parsedMessages = historyData.map((msg: Message) => ({
+    const saved = localStorage.getItem(CHAT_HISTORY_KEY)
+    if (!saved) return
+
+    const historyData = JSON.parse(saved)
+    messages.splice(
+      0,
+      messages.length,
+      ...historyData.map((msg: Message) => ({
         ...msg,
         isStreaming: false
       }))
-      messages.splice(0, messages.length, ...parsedMessages)
-    }
+    )
   } catch {
     localStorage.removeItem(CHAT_HISTORY_KEY)
   }
 }
 
-// 保存聊天历史
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
 const saveChatHistory = () => {
   if (!import.meta.client) return
-
   try {
-    const messagesToSave = messages.slice(-100)
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messagesToSave))
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)))
   } catch {
     toast.add({ title: '聊天历史保存失败', color: 'warning' })
   }
@@ -120,30 +126,23 @@ const saveChatHistory = () => {
 
 const debouncedSave = () => {
   if (saveTimeout) clearTimeout(saveTimeout)
-  saveTimeout = setTimeout(() => saveChatHistory(), 500)
+  saveTimeout = setTimeout(saveChatHistory, 500)
 }
 
-// 开始新对话（清除所有内容）
 const startNewChat = async () => {
   if (!import.meta.client) return
 
   try {
     isLoading.value = true
-
-    // 获取 token
     const token = useCookie('token').value
 
-    // 清除后端 AI 记忆
     await $fetch('/api/chat/memory', {
       method: 'DELETE',
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
 
     localStorage.removeItem(CHAT_HISTORY_KEY)
     messages.splice(0, messages.length)
-
     toast.add({ title: '已开始新对话', color: 'success' })
   } catch {
     toast.add({ title: '操作失败', color: 'error' })
@@ -250,15 +249,7 @@ const handleStop = () => {
 }
 
 watch(
-  () => messages.length,
-  () => {
-    if (messages.length > 0) debouncedSave()
-  },
-  { flush: 'post' }
-)
-
-watch(
-  () => messages,
+  messages,
   () => {
     if (messages.length > 0) debouncedSave()
   },
@@ -267,17 +258,12 @@ watch(
 
 onMounted(() => {
   loadChatHistory()
-  if (messages.length > 0) {
-    nextTick(() => scrollToBottom())
-  }
+  if (messages.length > 0) nextTick(scrollToBottom)
 
-  const message = route.query.message as string
-  if (message && message.trim()) {
-    input.value = message.trim()
-    nextTick(() => {
-      const event = new Event('submit')
-      handleSubmit(event)
-    })
+  const message = (route.query.message as string)?.trim()
+  if (message) {
+    input.value = message
+    nextTick(() => handleSubmit(new Event('submit')))
   }
 })
 
@@ -354,7 +340,7 @@ onUnmounted(() => {
                   <span class="h-2 w-2 animate-bounce rounded-full [animation-delay:-0.15s]" />
                   <span class="h-2 w-2 animate-bounce rounded-full" />
                 </div>
-                <!-- 消息内容 (已使用 DOMPurify 清理，安全) -->
+                <!-- 已使用 DOMPurify 清理 -->
                 <div
                   v-else-if="message.content"
                   class="prose prose-sm dark:prose-invert max-w-none"
@@ -362,12 +348,7 @@ onUnmounted(() => {
                 />
               </div>
               <div class="mt-1 text-xs">
-                {{
-                  new Date(message.timestamp).toLocaleTimeString('zh-CN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
-                }}
+                {{ formatDateTimeDisplay(message.timestamp) }}
                 <span v-if="message.isStreaming" class="ml-2">正在输入...</span>
               </div>
             </div>
@@ -382,14 +363,7 @@ onUnmounted(() => {
           <p class="mb-2 text-xs font-medium opacity-60">向我问点什么...</p>
           <div class="flex flex-wrap gap-2">
             <UButton
-              v-for="suggestion in [
-                '如何制定减肥计划？',
-                '适合我的运动方案',
-                '健康饮食建议',
-                '如何改善睡眠质量？',
-                '每天需要多少热量？',
-                '推荐的锻炼频率'
-              ]"
+              v-for="suggestion in SUGGESTIONS"
               :key="suggestion"
               variant="soft"
               color="neutral"
@@ -433,31 +407,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 自定义滚动条 */
-.overflow-y-auto {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(0 0 0 / 0.2) transparent;
-}
-
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: rgb(0 0 0 / 0.05);
-  border-radius: 0.25rem;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgb(0 0 0 / 0.2);
-  border-radius: 0.25rem;
-  transition: background 0.3s;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 0 0 / 0.3);
-}
-
 /* Markdown 内容样式 */
 .prose :deep(p) {
   margin: 0 0 0.5rem;
