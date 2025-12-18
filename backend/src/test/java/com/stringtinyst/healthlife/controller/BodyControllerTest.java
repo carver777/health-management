@@ -20,10 +20,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(BodyController.class)
@@ -46,7 +46,8 @@ class BodyControllerTest {
   @DisplayName("查询 Body 列表返回分页数据")
   void listBodyMetrics() throws Exception {
     Body sample =
-        new Body(1, "u1", new BigDecimal("180"), new BigDecimal("75"), LocalDate.parse("2024-01-01"));
+        new Body(
+            1, "u1", new BigDecimal("180"), new BigDecimal("75"), LocalDate.parse("2024-01-01"));
     when(bodyService.page(eq(1), eq(10), eq("u1"), Mockito.isNull(), Mockito.isNull()))
         .thenReturn(new PageBean(1L, List.of(sample)));
 
@@ -65,7 +66,12 @@ class BodyControllerTest {
 
     String payload =
         objectMapper.writeValueAsString(
-            new Body(0, "u2", new BigDecimal("170"), new BigDecimal("65"), LocalDate.parse("2024-02-02")));
+            new Body(
+                0,
+                "u2",
+                new BigDecimal("170"),
+                new BigDecimal("65"),
+                LocalDate.parse("2024-02-02")));
 
     mockMvc
         .perform(post("/body-metrics").contentType(MediaType.APPLICATION_JSON).content(payload))

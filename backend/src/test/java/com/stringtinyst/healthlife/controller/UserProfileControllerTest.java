@@ -52,7 +52,8 @@ class UserProfileControllerTest {
   @DisplayName("获取用户资料成功")
   void getProfile_success() throws Exception {
     when(jwtUtils.parseJWT("token-1")).thenReturn(claims("u1"));
-    User user = new User("u1", "u1@example.com", null, "Tom", "M", LocalDate.parse("1990-01-01"), null);
+    User user =
+        new User("u1", "u1@example.com", null, "Tom", "M", LocalDate.parse("1990-01-01"), null);
     when(userService.getUser("u1")).thenReturn(user);
 
     mockMvc

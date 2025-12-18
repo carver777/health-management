@@ -20,10 +20,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(DietController.class)
@@ -45,9 +45,9 @@ class DietControllerTest {
   @Test
   @DisplayName("查询 Diet 列表返回分页数据")
   void listDietItems() throws Exception {
-    Diet sample =
-        new Diet(10, "u1", LocalDate.parse("2024-03-01"), "Apple", "breakfast", 120);
-    when(dietService.page(eq(1), eq(10), eq("u1"), Mockito.isNull(), Mockito.isNull(), Mockito.isNull()))
+    Diet sample = new Diet(10, "u1", LocalDate.parse("2024-03-01"), "Apple", "breakfast", 120);
+    when(dietService.page(
+            eq(1), eq(10), eq("u1"), Mockito.isNull(), Mockito.isNull(), Mockito.isNull()))
         .thenReturn(new PageBean(1L, List.of(sample)));
 
     mockMvc
