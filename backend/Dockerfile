@@ -1,5 +1,7 @@
-FROM eclipse-temurin:17-jre-jammy
+FROM docker.io/eclipse-temurin:17-jre-jammy
+
 WORKDIR /app
+
 RUN apt-get update && \
     apt-get install -y curl && \
     apt-get clean && \

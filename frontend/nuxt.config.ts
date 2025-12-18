@@ -77,6 +77,10 @@ export default defineNuxtConfig({
     '/profile': { ssr: false }
   },
 
+  devServer: {
+    host: '0.0.0.0'
+  },
+
   experimental: {
     payloadExtraction: false,
     renderJsonPayloads: true,
