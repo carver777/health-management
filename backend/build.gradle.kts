@@ -1,8 +1,34 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
     java
     id("org.springframework.boot") version "3.4.6"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "7.0.3"
+}
+
+tasks.register<Exec>("installGitHooks") {
+    group = "verification"
+    description = "Installs git hooks using pre-commit"
+
+    // Calculate absolute path to scripts directory
+    // project.projectDir is '.../backend', so parent is project root
+    val scriptsDir = project.projectDir.parentFile.resolve("scripts")
+
+    // Set working directory to the project root
+    workingDir(project.projectDir.parentFile)
+
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        val scriptPath = scriptsDir.resolve("check-pre-commit.ps1").absolutePath
+        commandLine("pwsh", "-ExecutionPolicy", "Bypass", "-File", scriptPath)
+    } else {
+        val scriptPath = scriptsDir.resolve("check-pre-commit.sh").absolutePath
+        commandLine("bash", scriptPath)
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn("installGitHooks")
 }
 
 group = "com.stringtinyst"

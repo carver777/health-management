@@ -6,6 +6,7 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "preview": "nuxt preview",
+    "prepare": "node ../scripts/check-pre-commit.js",
     "postinstall": "nuxt prepare",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
