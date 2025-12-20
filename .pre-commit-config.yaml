@@ -1,0 +1,52 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  - repo: local
+    hooks:
+      - id: spotless-apply
+        name: Java Spotless Format
+        entry: sh -c 'cd backend && sh gradlew spotlessApply --quiet --no-daemon'
+        language: system
+        files: ^backend/src/.*\.java$
+        pass_filenames: false
+
+      - id: spotless-check
+        name: Java Spotless Check
+        entry: sh -c 'cd backend && sh gradlew spotlessCheck --quiet --no-daemon'
+        language: system
+        files: ^backend/src/.*\.java$
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Frontend Prettier Format
+        entry: sh -c 'cd frontend && pnpm prettier --write .'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: Frontend ESLint Check
+        entry: sh -c 'cd frontend && pnpm eslint . --fix'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+default_language_version:
+  python: python3
+
+fail_fast: false
