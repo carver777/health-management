@@ -49,10 +49,9 @@ test.describe('睡眠数据页面测试', () => {
                 rows: [
                   {
                     sleepItemID: 1,
-                    recordDate: new Date().toISOString().split('T')[0],
-                    bedTime:
-                      new Date(Date.now() - 86400000).toISOString().split('T')[0] + 'T22:00:00',
-                    wakeTime: new Date().toISOString().split('T')[0] + 'T07:00:00'
+                    recordDate: '2025-12-21',
+                    bedTime: '2025-12-20T22:00:00',
+                    wakeTime: '2025-12-21T07:00:00'
                   }
                 ],
                 total: 1

@@ -127,9 +127,11 @@ test.describe('通用功能与边界测试', () => {
   test('表单非法输入验证反馈', async ({ page }) => {
     await page.goto('/body-data')
     await page.getByRole('button', { name: '添加记录' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
 
     // 输入非法数据 (例如负数体重)
     const weightInput = page.getByLabel('体重', { exact: true })
+    await weightInput.clear()
     await weightInput.fill('-50')
 
     // 触发验证
@@ -139,7 +141,7 @@ test.describe('通用功能与边界测试', () => {
     await page.getByRole('button', { name: '确认记录' }).click()
 
     // 验证错误提示
-    await expect(page.getByText('体重应在 30-300 kg 之间')).toBeVisible()
+    await expect(page.getByText('体重应在 30-300 kg 之间')).toBeVisible({ timeout: 5000 })
 
     // 验证对话框仍然可见
     await expect(page.getByRole('dialog')).toBeVisible()
