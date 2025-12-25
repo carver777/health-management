@@ -26,3 +26,4 @@ test-results/
 # Local env files
 .env
 !.env.example
+secrets.json
