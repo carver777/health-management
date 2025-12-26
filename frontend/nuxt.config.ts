@@ -126,9 +126,7 @@ export default defineNuxtConfig({
   },
 
   fonts: {
-    providers: {
-      fontshare: false
-    }
+    provider: 'bunny'
   },
 
   icon: {
