@@ -21,6 +21,7 @@ const isLoading = ref(false)
 const messages = reactive<Message[]>([])
 const messagesContainer = ref<HTMLElement>()
 const abortController = ref<AbortController | null>(null)
+const { user } = useAuth()
 
 // SSE 连接管理
 const {
@@ -33,7 +34,11 @@ const {
   maxDelay: 30000
 })
 
-const CHAT_HISTORY_KEY = 'health_chat_history'
+const getChatHistoryKey = () => {
+  const uid = user.value?.userID
+  return uid ? `health_chat_history_${uid}` : 'health_chat_history_guest'
+}
+
 const SUGGESTIONS = [
   '如何制定减肥计划？',
   '适合我的运动方案',
@@ -131,7 +136,8 @@ const loadChatHistory = () => {
   if (!import.meta.client) return
 
   try {
-    const saved = localStorage.getItem(CHAT_HISTORY_KEY)
+    const key = getChatHistoryKey()
+    const saved = localStorage.getItem(key)
     if (!saved) return
 
     const historyData = JSON.parse(saved)
@@ -144,7 +150,8 @@ const loadChatHistory = () => {
       }))
     )
   } catch {
-    localStorage.removeItem(CHAT_HISTORY_KEY)
+    const key = getChatHistoryKey()
+    localStorage.removeItem(key)
   }
 }
 
@@ -153,7 +160,8 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null
 const saveChatHistory = () => {
   if (!import.meta.client) return
   try {
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)))
+    const key = getChatHistoryKey()
+    localStorage.setItem(key, JSON.stringify(messages.slice(-100)))
   } catch {
     toast.add({ title: '聊天历史保存失败', color: 'warning' })
   }
@@ -176,7 +184,8 @@ const startNewChat = async () => {
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
 
-    localStorage.removeItem(CHAT_HISTORY_KEY)
+    const key = getChatHistoryKey()
+    localStorage.removeItem(key)
     messages.splice(0, messages.length)
     toast.add({ title: '已开始新对话', color: 'success' })
   } catch {
@@ -293,6 +302,18 @@ watch(
     if (messages.length > 0) debouncedSave()
   },
   { deep: true, flush: 'post' }
+)
+
+// 监听用户 ID 变化，切换用户时重新加载聊天记录
+watch(
+  () => user.value?.userID,
+  () => {
+    if (import.meta.client) {
+      messages.splice(0, messages.length)
+      loadChatHistory()
+      if (messages.length > 0) nextTick(scrollToBottom)
+    }
+  }
 )
 
 onMounted(() => {

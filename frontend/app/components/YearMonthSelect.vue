@@ -300,6 +300,7 @@ function useDisplayedYearRange(
         <!-- 月份选择 -->
         <div class="flex items-center justify-between gap-2">
           <UButton
+            icon="i-heroicons-chevron-left"
             color="neutral"
             variant="ghost"
             square
@@ -312,6 +313,7 @@ function useDisplayedYearRange(
             </UButton>
           </UPopover>
           <UButton
+            icon="i-heroicons-chevron-right"
             color="neutral"
             variant="ghost"
             square
@@ -345,6 +347,7 @@ function useDisplayedYearRange(
         <!-- 年份选择 -->
         <div class="flex items-center justify-between gap-2">
           <UButton
+            icon="i-heroicons-chevron-left"
             color="neutral"
             variant="ghost"
             square
@@ -359,6 +362,7 @@ function useDisplayedYearRange(
             </UButton>
           </UPopover>
           <UButton
+            icon="i-heroicons-chevron-right"
             color="neutral"
             variant="ghost"
             square
